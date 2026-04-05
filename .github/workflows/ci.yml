@@ -24,10 +24,6 @@ jobs:
       - name: Create local env file
         run: cp .env.local.example .env.local
 
-      - name: Force mock upload mode in CI
-        run: |
-          echo "RECORDER_UPLOAD_MODE=mock" >> .env.local
-
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 

@@ -64,7 +64,7 @@ console.log(
       ok: true,
       bucket,
       region,
-      nextStep: `RECORDER_UPLOAD_MODE=s3 AWS_S3_BUCKET=${bucket} npm run test:s3`
+      nextStep: `AWS_S3_BUCKET=${bucket} npm run test:s3`
     },
     null,
     2

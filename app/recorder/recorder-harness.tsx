@@ -1,6 +1,7 @@
 "use client";
 
 import { fixWebmDuration } from "@fix-webm-duration/fix";
+import posthog from "posthog-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type RecorderUiState = RecordingState | "idle" | "requesting" | "error";
@@ -22,6 +23,7 @@ type RecorderSnapshot = {
   audioLevel: number;
   audioWarning: AudioWarning;
   meterVisible: boolean;
+  posthogSessionId: string | null;
 };
 
 const TEST_MODE = process.env.NEXT_PUBLIC_RECORDER_TEST_MODE === "true";
@@ -78,7 +80,8 @@ const initialSnapshot: RecorderSnapshot = {
   error: null,
   audioLevel: -Infinity,
   audioWarning: null,
-  meterVisible: false
+  meterVisible: false,
+  posthogSessionId: null,
 };
 
 function getPreferredMimeType() {
@@ -244,11 +247,14 @@ export function RecorderHarness() {
   const uploadBlob = useCallback(
     async (blob: Blob) => {
       const contentType = blob.type || "video/webm";
+      const posthogSessionId = posthog.get_session_id() ?? null;
+      const headers: Record<string, string> = { "Content-Type": contentType };
+      if (posthogSessionId) {
+        headers["X-PostHog-Session-Id"] = posthogSessionId;
+      }
       const response = await fetch(UPLOAD_PATH, {
         method: "PUT",
-        headers: {
-          "Content-Type": contentType
-        },
+        headers,
         body: blob
       });
 
@@ -261,13 +267,18 @@ export function RecorderHarness() {
         target?: string;
       };
 
+      if (payload.key) {
+        posthog.capture("camera_recording_uploaded", { s3_key: payload.key });
+      }
+
       updateSnapshot((current) => ({
         ...current,
         uploadCount: current.uploadCount + 1,
         uploadMethod: "PUT",
         uploadContentType: contentType,
         uploadTarget: payload.target ?? UPLOAD_PATH,
-        uploadKey: payload.key ?? null
+        uploadKey: payload.key ?? null,
+        posthogSessionId,
       }));
     },
     [updateSnapshot]

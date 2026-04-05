@@ -28,7 +28,7 @@ export default defineConfig({
     }
   },
   webServer: {
-    command: "RECORDER_UPLOAD_MODE=mock npm run dev -- --hostname localhost --port 3000",
+    command: "npm run dev -- --hostname localhost --port 3000",
     url: `${baseURL}/recorder`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000

@@ -4,12 +4,11 @@ import { expect, test } from "@playwright/test";
 const bucket = process.env.AWS_S3_BUCKET;
 const region = process.env.AWS_REGION || "us-east-1";
 const liveS3Enabled =
-  process.env.RECORDER_UPLOAD_MODE === "s3" &&
   !!bucket &&
   !bucket.includes("placeholder") &&
   !bucket.includes("replace-me");
 
-test.skip(!liveS3Enabled, "Live S3 verification requires RECORDER_UPLOAD_MODE=s3 and AWS_S3_BUCKET.");
+test.skip(!liveS3Enabled, "Live S3 verification requires a real AWS_S3_BUCKET.");
 
 test("uploads the recorder blob to S3 and keeps it private", async ({ page }) => {
   await page.goto("/recorder");

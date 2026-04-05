@@ -19,7 +19,6 @@ const execFileAsync = promisify(execFile);
 const bucket = process.env.AWS_S3_BUCKET;
 const region = process.env.AWS_REGION || "us-east-1";
 const liveS3Enabled =
-  process.env.RECORDER_UPLOAD_MODE === "s3" &&
   !!bucket &&
   !bucket.includes("placeholder") &&
   !bucket.includes("replace-me");
@@ -41,7 +40,7 @@ function countEbmlHeaders(data: Buffer): number {
   return count;
 }
 
-test.skip(!liveS3Enabled, "S3 playback test requires RECORDER_UPLOAD_MODE=s3 and AWS_S3_BUCKET.");
+test.skip(!liveS3Enabled, "S3 playback test requires a real AWS_S3_BUCKET.");
 
 test("record → upload to S3 → download → verify playable WebM", async ({ page }) => {
   // Navigate and wait for recording to start

@@ -18,14 +18,13 @@ const bucket = process.env.AWS_S3_BUCKET;
 const region = process.env.AWS_REGION || "us-east-1";
 const prefix = process.env.AWS_S3_RECORDINGS_PREFIX || "recordings";
 const liveS3Enabled =
-  process.env.RECORDER_UPLOAD_MODE === "s3" &&
   !!bucket &&
   !bucket.includes("placeholder") &&
   !bucket.includes("replace-me");
 
 test.skip(
   !liveS3Enabled,
-  "S3 sync requires RECORDER_UPLOAD_MODE=s3 and AWS_S3_BUCKET."
+  "S3 sync requires a real AWS_S3_BUCKET."
 );
 
 test("sync all S3 recordings to temp/recordings/", async () => {

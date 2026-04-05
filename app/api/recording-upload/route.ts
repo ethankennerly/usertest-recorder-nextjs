@@ -28,10 +28,11 @@ export function getObjectKey() {
 }
 
 export async function PUT(request: Request) {
-  const mode = process.env.RECORDER_UPLOAD_MODE || "mock";
+  const bucket = process.env.AWS_S3_BUCKET;
 
-  if (mode === "mock") {
+  if (!bucket || bucket.includes("replace-me") || bucket.includes("placeholder")) {
     const payload = await request.arrayBuffer();
+    const posthogSessionId = request.headers.get("x-posthog-session-id") ?? null;
 
     return NextResponse.json({
       ok: true,
@@ -39,21 +40,14 @@ export async function PUT(request: Request) {
       target: "mock",
       size: payload.byteLength,
       contentType:
-        request.headers.get("content-type") ?? "application/octet-stream"
+        request.headers.get("content-type") ?? "application/octet-stream",
+      posthogSessionId,
     });
-  }
-
-  const bucket = process.env.AWS_S3_BUCKET;
-
-  if (!bucket) {
-    return NextResponse.json(
-      { ok: false, error: "AWS_S3_BUCKET is required." },
-      { status: 500 }
-    );
   }
 
   const client = getS3Client();
   const contentType = request.headers.get("content-type") || "video/webm";
+  const posthogSessionId = request.headers.get("x-posthog-session-id");
   const key = getObjectKey();
   const body = Buffer.from(await request.arrayBuffer());
 
@@ -62,7 +56,10 @@ export async function PUT(request: Request) {
       Bucket: bucket,
       Key: key,
       Body: body,
-      ContentType: contentType
+      ContentType: contentType,
+      Metadata: posthogSessionId
+        ? { "posthog-session-id": posthogSessionId }
+        : undefined,
     })
   );
 
