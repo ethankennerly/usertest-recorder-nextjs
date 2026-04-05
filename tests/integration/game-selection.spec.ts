@@ -124,12 +124,17 @@ test("Unity quit stops recording and triggers upload", async ({ page }) => {
   );
   await page.waitForTimeout(1_200);
 
+  // Ensure data is actually recorded before stopping
+  await expect
+    .poll(async () => page.evaluate(() => window.__recorderTest?.bytes ?? 0))
+    .toBeGreaterThan(0);
+
   // Simulate Unity quit
-  await page.evaluate(() => {
-    if (typeof window.__onUnityGameQuit === "function") {
+  await page.evaluate(async () => {
+    if (typeof window.__simulateUnityQuit === "function") {
+      await window.__simulateUnityQuit();
+    } else if (typeof window.__onUnityGameQuit === "function") {
       window.__onUnityGameQuit();
-    } else if (typeof window.__simulateUnityQuit === "function") {
-      window.__simulateUnityQuit();
     }
   });
 
@@ -138,8 +143,11 @@ test("Unity quit stops recording and triggers upload", async ({ page }) => {
     null,
     { timeout: 10_000 }
   );
-
-  await expect.poll(() => uploads.length).toBeGreaterThanOrEqual(1);
+  await expect
+    .poll(async () =>
+      page.evaluate(() => window.__recorderTest?.uploadCount ?? 0)
+    )
+    .toBeGreaterThanOrEqual(1);
 
   const snapshot = await page.evaluate(() => window.__recorderTest);
   expect(snapshot?.state).toBe("inactive");
