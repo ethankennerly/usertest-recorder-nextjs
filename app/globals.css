@@ -103,3 +103,71 @@ main {
   color: #b91c1c;
   font-weight: 600;
 }
+
+.warning-text {
+  color: #b45309;
+  font-weight: 600;
+}
+
+/* Audio level meter */
+.audio-meter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+  height: 0;
+  overflow: visible;
+  margin: 0;
+}
+
+.audio-meter--visible {
+  opacity: 1;
+  pointer-events: auto;
+  height: auto;
+  margin: 0.25rem 0;
+}
+
+.audio-meter__icon {
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.audio-meter__track {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: visible;
+}
+
+.audio-meter__threshold {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  border-left: 2px dashed #94a3b8;
+  z-index: 1;
+}
+
+.audio-meter__fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.15s ease-out, background-color 0.3s ease;
+  min-width: 2px;
+}
+
+.audio-meter__fill--ok {
+  background: #22c55e;
+}
+
+.audio-meter__fill--quiet {
+  background: #ef4444;
+}
+
+.audio-meter__fill--silent {
+  background: #ef4444;
+}

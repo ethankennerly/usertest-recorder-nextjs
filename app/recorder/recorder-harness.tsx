@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type RecorderUiState = RecordingState | "idle" | "requesting" | "error";
 
+type AudioWarning = "silent" | "quiet" | null;
+
 type RecorderSnapshot = {
   state: RecorderUiState;
   bytes: number;
@@ -17,11 +19,50 @@ type RecorderSnapshot = {
   uploadTarget: string | null;
   uploadKey: string | null;
   error: string | null;
+  audioLevel: number;
+  audioWarning: AudioWarning;
+  meterVisible: boolean;
 };
 
 const TEST_MODE = process.env.NEXT_PUBLIC_RECORDER_TEST_MODE === "true";
 const UPLOAD_PATH =
   process.env.NEXT_PUBLIC_RECORDER_UPLOAD_PATH ?? "/api/mock-upload";
+const VERBOSE = process.env.NEXT_PUBLIC_RECORDER_VERBOSE === "true";
+
+function log(...args: unknown[]) {
+  if (VERBOSE) {
+    console.log("[recorder]", ...args);
+  }
+}
+
+/**
+ * Audio level thresholds (dBFS, tunable via env vars).
+ *
+ * Professional reference (ITU-T P.56 active speech level):
+ * - Conversational speech at a laptop mic: roughly -20 to -30 dBFS
+ * - Quiet room ambient noise floor: roughly -45 to -55 dBFS
+ * - Dead/blocked mic (digital silence): below -70 dBFS
+ *
+ * SILENT_THRESHOLD: below this the mic is dead or OS-level blocked.
+ * QUIET_THRESHOLD: below this the user's voice cannot be distinguished
+ *   from ambient noise. Set to -26 dBFS by default — the bottom of the
+ *   conversational speech range.
+ */
+const SILENT_THRESHOLD_DB = Number(
+  process.env.NEXT_PUBLIC_AUDIO_SILENT_DB ?? "-50"
+);
+const QUIET_THRESHOLD_DB = Number(
+  process.env.NEXT_PUBLIC_AUDIO_QUIET_DB ?? "-26"
+);
+/** How often (ms) to sample the audio level. */
+const AUDIO_POLL_MS = 500;
+/** Seconds of consecutive quiet/silent polls before the meter auto-shows. */
+const METER_SHOW_AFTER_QUIET_S = Number(
+  process.env.NEXT_PUBLIC_AUDIO_METER_SHOW_AFTER_S ?? "3"
+);
+/** Min/max dB range for the visual meter bar. */
+const METER_MIN_DB = -60;
+const METER_MAX_DB = 0;
 
 const initialSnapshot: RecorderSnapshot = {
   state: "idle",
@@ -34,7 +75,10 @@ const initialSnapshot: RecorderSnapshot = {
   uploadContentType: null,
   uploadTarget: null,
   uploadKey: null,
-  error: null
+  error: null,
+  audioLevel: -Infinity,
+  audioWarning: null,
+  meterVisible: false
 };
 
 function getPreferredMimeType() {
@@ -53,6 +97,55 @@ function getPreferredMimeType() {
   );
 }
 
+function AudioMeter({
+  level,
+  warning,
+  visible
+}: {
+  level: number;
+  warning: AudioWarning;
+  visible: boolean;
+}) {
+  const clampedDb = Math.max(METER_MIN_DB, Math.min(METER_MAX_DB, level));
+  const pct = ((clampedDb - METER_MIN_DB) / (METER_MAX_DB - METER_MIN_DB)) * 100;
+  const thresholdPct =
+    ((QUIET_THRESHOLD_DB - METER_MIN_DB) / (METER_MAX_DB - METER_MIN_DB)) * 100;
+  const emoji = warning ? "🔇" : "🎙️";
+
+  return (
+    <div
+      className={`audio-meter ${visible ? "audio-meter--visible" : ""}`}
+      data-testid="audio-meter"
+      data-warning={warning}
+      role="meter"
+      aria-valuenow={level}
+      aria-valuemin={METER_MIN_DB}
+      aria-valuemax={METER_MAX_DB}
+      aria-label="Microphone audio level"
+    >
+      <span className="audio-meter__icon" aria-hidden="true">
+        {emoji}
+      </span>
+      <div className="audio-meter__track">
+        <div
+          className="audio-meter__threshold"
+          style={{ left: `${thresholdPct}%` }}
+        />
+        <div
+          className={`audio-meter__fill ${
+            warning === "silent"
+              ? "audio-meter__fill--silent"
+              : warning === "quiet"
+                ? "audio-meter__fill--quiet"
+                : "audio-meter__fill--ok"
+          }`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function RecorderHarness() {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -60,6 +153,10 @@ export function RecorderHarness() {
   const chunksRef = useRef<Blob[]>([]);
   const stopRequestedRef = useRef(false);
   const recordingStartTimeRef = useRef(0);
+  const startGenerationRef = useRef(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const audioPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const preferredMimeType = useMemo(() => getPreferredMimeType(), []);
 
@@ -68,6 +165,80 @@ export function RecorderHarness() {
       setSnapshot((current) => updater(current));
     },
     []
+  );
+
+  const stopAudioMonitor = useCallback(() => {
+    if (audioPollRef.current !== null) {
+      clearInterval(audioPollRef.current);
+      audioPollRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+    analyserRef.current = null;
+  }, []);
+
+  const startAudioMonitor = useCallback(
+    (stream: MediaStream) => {
+      stopAudioMonitor();
+
+      const audioTrack = stream.getAudioTracks()[0];
+      if (!audioTrack) {
+        log("no audio track, skipping monitor");
+        return;
+      }
+
+      const ctx = new AudioContext();
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+
+      audioContextRef.current = ctx;
+      analyserRef.current = analyser;
+
+      const buf = new Float32Array(analyser.fftSize);
+      let consecutiveQuietPolls = 0;
+      const quietPollsToShow = Math.ceil(
+        (METER_SHOW_AFTER_QUIET_S * 1000) / AUDIO_POLL_MS
+      );
+
+      audioPollRef.current = setInterval(() => {
+        if (!analyserRef.current) return;
+        analyserRef.current.getFloatTimeDomainData(buf);
+
+        let sum = 0;
+        for (let i = 0; i < buf.length; i++) {
+          sum += buf[i] * buf[i];
+        }
+        const rms = Math.sqrt(sum / buf.length);
+        const dB = rms > 0 ? 20 * Math.log10(rms) : -Infinity;
+
+        let warning: AudioWarning = null;
+        if (dB < SILENT_THRESHOLD_DB) {
+          warning = "silent";
+        } else if (dB < QUIET_THRESHOLD_DB) {
+          warning = "quiet";
+        }
+
+        if (warning) {
+          consecutiveQuietPolls++;
+        } else {
+          consecutiveQuietPolls = 0;
+        }
+
+        const shouldShow = consecutiveQuietPolls >= quietPollsToShow;
+
+        updateSnapshot((current) => ({
+          ...current,
+          audioLevel: Math.round(dB),
+          audioWarning: warning,
+          meterVisible: shouldShow || (current.meterVisible && warning !== null)
+        }));
+      }, AUDIO_POLL_MS);
+    },
+    [stopAudioMonitor, updateSnapshot]
   );
 
   const uploadBlob = useCallback(
@@ -121,6 +292,11 @@ export function RecorderHarness() {
 
   const startRecording = useCallback(async () => {
     try {
+      // Increment generation so any in-flight getUserMedia from a previous
+      // mount will detect it is stale and bail out after resolving.
+      const generation = ++startGenerationRef.current;
+      log("startRecording gen", generation);
+
       // Stop any existing recorder from a previous mount to prevent
       // two concurrent recordings sharing the same chunksRef.
       const prevRecorder = mediaRecorderRef.current;
@@ -138,10 +314,20 @@ export function RecorderHarness() {
         error: null
       }));
 
+      log("getUserMedia requesting, gen", generation);
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true
       });
+      log("getUserMedia resolved, gen", generation, "current", startGenerationRef.current);
+
+      // After the async getUserMedia, check if a newer startRecording call
+      // has superseded this one (React Strict Mode double-mount race).
+      if (generation !== startGenerationRef.current) {
+        log("stale generation", generation, "discarding stream");
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
 
       const recorder = preferredMimeType
         ? new MediaRecorder(stream, { mimeType: preferredMimeType })
@@ -150,6 +336,8 @@ export function RecorderHarness() {
       mediaStreamRef.current = stream;
       mediaRecorderRef.current = recorder;
       stopRequestedRef.current = false;
+
+      startAudioMonitor(stream);
 
       recorder.onstart = () => {
         updateSnapshot((current) => ({
@@ -179,6 +367,8 @@ export function RecorderHarness() {
       };
 
       recorder.onstop = () => {
+        log("recorder stopped, chunks:", chunksRef.current.length);
+        stopAudioMonitor();
         void (async () => {
           const rawBlob = new Blob(chunksRef.current, {
             type: recorder.mimeType || preferredMimeType || "video/webm"
@@ -213,6 +403,7 @@ export function RecorderHarness() {
 
       recorder.start(250);
       recordingStartTimeRef.current = Date.now();
+      log("recorder started, gen", generation);
       updateSnapshot((current) => ({
         ...current,
         state: recorder.state
@@ -225,15 +416,18 @@ export function RecorderHarness() {
           error instanceof Error ? error.message : "Failed to start recorder."
       }));
     }
-  }, [preferredMimeType, updateSnapshot, uploadBlob]);
+  }, [preferredMimeType, updateSnapshot, uploadBlob, startAudioMonitor, stopAudioMonitor]);
 
   useEffect(() => {
+    log("useEffect mount");
     void startRecording();
 
     return () => {
+      log("useEffect cleanup");
+      stopAudioMonitor();
       mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, [startRecording]);
+  }, [startRecording, stopAudioMonitor]);
 
   useEffect(() => {
     if (!TEST_MODE) {
@@ -312,6 +506,13 @@ export function RecorderHarness() {
           </span>
         </li>
       </ul>
+      {snapshot.state === "recording" ? (
+        <AudioMeter
+          level={snapshot.audioLevel}
+          warning={snapshot.audioWarning}
+          visible={snapshot.meterVisible}
+        />
+      ) : null}
       {snapshot.error ? <p className="error-text">{snapshot.error}</p> : null}
       <div>
         <button className="button" onClick={() => void stopRecording()} type="button">

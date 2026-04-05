@@ -54,7 +54,35 @@
 - [x] Automated test records, stops, checks duration > 0, frame count > 1, and both codecs present.
 - [x] Research three professional browser recording projects for how they produce playable WebM files.
 - [x] Apply the fix from professional reference projects (`@fix-webm-duration/fix` adds duration metadata).
+- [x] Record. Download. Play. Verify: video is moving shapes.
+- [ ] Record. Download. Play. Verify: audio is starting and stopping sounds.
 - [ ] Open browser. Record. Download. Play. Verify: camera video and audio replays.
+
+### 3a. Diagnosed: React Strict Mode double-mount + async getUserMedia race
+
+Root cause: `useEffect` calls `startRecording()` which awaits `getUserMedia` (200-500ms on real hardware). React Strict Mode unmounts and remounts, calling `startRecording` again while the first `getUserMedia` is still in-flight. Both resolve and create two MediaRecorders sharing `chunksRef`, producing a single file with two concatenated EBML WebM headers. Players read only the first tiny fragment (the ghost mount's ~34KB recording).
+
+- [x] Fix: generation counter (`startGenerationRef`) in `startRecording`. After `getUserMedia` resolves, check if generation is still current. Stale calls stop their stream and bail.
+- [x] Test: `recorder.single-session.spec.ts` injects 500ms delay into `getUserMedia` via `page.addInitScript` and then calls `__simulateRemount` to force a concurrent race. Asserts exactly 1 EBML header in the upload.
+- [x] Test: `recorder.playback.spec.ts` checks duration > 0, frame count > 1, codecs present, AND exactly 1 EBML header.
+- [x] Verbose diagnostics: set `NEXT_PUBLIC_RECORDER_VERBOSE=true` to log recorder lifecycle (mount, getUserMedia, generation checks, start, stop, chunks) to the browser console.
+
+### 3b. Diagnosed: Silent audio in real-camera recordings
+
+Observed: 8 of 27 S3 recordings have -91 dB mean volume (digital silence). The opus audio stream exists but contains only 8-byte DTX silence packets (vs. ~959-byte packets in audible recordings). Automated tests pass because Chromium's `--use-fake-device-for-media-stream` generates a synthetic beep at ~-21 dB, masking the real issue.
+
+Root cause: Chrome/macOS got into a stale permission state where `getUserMedia({audio:true})` succeeded and returned a live audio track, but the actual microphone data was blocked — delivering only silence. Toggling Chrome's microphone permission from "Allow" to "Ask" and re-granting it resolved the issue. The exact trigger is unknown but appears to be a browser or OS-level permission caching bug.
+
+Diagnosis data from S3 recordings:
+- Fake device recordings: mean_volume ~-21 dB (synthetic beep — always passes)
+- Real mic recordings with permission: mean_volume ~-28 to -48 dB (ambient room noise + speech)
+- Real mic recordings with stale permission: mean_volume -91.0 dB (digital silence, 8-byte opus packets)
+
+- [x] Test: `recorder.playback.spec.ts` now checks `mean_volume > -50 dB` via ffmpeg volumedetect. Catches digital silence while allowing real ambient noise.
+- [x] Test: `recorder-playback.s3.spec.ts` also checks audio level after S3 round-trip.
+- [x] Validated test accuracy: -91 dB file → FAIL, -41 dB file → PASS, -21 dB fake device → PASS.
+- [x] Fix: runtime audio level monitoring using `AudioContext` + `AnalyserNode`. Polls RMS every 500ms. Shows warning when audio is silent (< -60 dB) or too quiet to distinguish speech from noise (< -40 dB).
+- [ ] Fix: add a pre-recording mic permission check. After `getUserMedia` succeeds, sample the audio track for 500ms to verify it is producing non-zero data before starting the MediaRecorder. If silent, show a diagnostic message instead of silently recording mute audio.
 
 ## 4. Add local and hosted automation
 

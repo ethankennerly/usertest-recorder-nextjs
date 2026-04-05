@@ -13,6 +13,25 @@ import { expect, test } from "@playwright/test";
 
 const execFileAsync = promisify(execFile);
 
+const EBML_HEADER = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
+
+function countEbmlHeaders(data: Buffer): number {
+  let count = 0;
+  let pos = 0;
+  while (pos <= data.length - 4) {
+    if (
+      data[pos] === 0x1a &&
+      data[pos + 1] === 0x45 &&
+      data[pos + 2] === 0xdf &&
+      data[pos + 3] === 0xa3
+    ) {
+      count++;
+    }
+    pos++;
+  }
+  return count;
+}
+
 test("real browser recording produces a playable WebM", async ({ page }) => {
   let uploadData: Buffer | null = null;
 
@@ -84,4 +103,35 @@ test("real browser recording produces a playable WebM", async ({ page }) => {
   const codecNames = (probeResult.streams ?? []).map((s) => s.codec_name);
   expect(codecNames, "Missing video stream").toContain("vp9");
   expect(codecNames, "Missing audio stream").toContain("opus");
+
+  // Must contain exactly one WebM session (no concatenated EBML headers)
+  const ebmlCount = countEbmlHeaders(uploadData!);
+  expect(
+    ebmlCount,
+    `File has ${ebmlCount} EBML headers — multiple concatenated WebM sessions`
+  ).toBe(1);
+
+  // Audio must not be silent — mean volume above -50 dB.
+  // Fake device beep: ~-21 dB. Real mic ambient: ~-40 dB. Digital silence: -91 dB.
+  // If this fails, check: macOS System Settings → Privacy & Security → Microphone
+  // must authorize the browser. getUserMedia succeeds even when macOS blocks the
+  // mic, but the audio track delivers only zeros (-91 dB).
+  const { stderr: volStderr } = await execFileAsync("ffmpeg", [
+    "-i", filePath, "-af", "volumedetect", "-f", "null", "/dev/null"
+  ]);
+  const meanMatch = volStderr.match(/mean_volume:\s*([-\d.]+)/);
+  const meanVolume = meanMatch ? parseFloat(meanMatch[1]) : -91;
+  expect(
+    meanVolume,
+    [
+      `Audio is silent (mean_volume: ${meanVolume} dB).`,
+      "",
+      "Root cause: macOS microphone permission not granted to the browser.",
+      "getUserMedia({audio:true}) succeeds but the audio track delivers only zeros.",
+      "Fix: macOS System Settings → Privacy & Security → Microphone → enable Chrome/Chromium.",
+      "",
+      "This test uses Chromium's --use-fake-device-for-media-stream which generates",
+      "a synthetic beep (~-21 dB). If this test fails, the fake device flag is missing."
+    ].join("\n")
+  ).toBeGreaterThan(-50);
 });

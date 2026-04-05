@@ -20,6 +20,16 @@ function countEbmlHeaders(data: Buffer): number {
 }
 
 test("uploaded recording contains exactly one WebM session", async ({ page }) => {
+  // Inject 500ms latency into getUserMedia to simulate real camera hardware.
+  // With fake devices getUserMedia resolves instantly, hiding the race.
+  await page.addInitScript(() => {
+    const original = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = async (constraints) => {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      return original(constraints);
+    };
+  });
+
   let uploadData: Buffer | null = null;
 
   await page.route("**/api/recording-upload", async (route) => {
@@ -37,21 +47,27 @@ test("uploaded recording contains exactly one WebM session", async ({ page }) =>
     });
   });
 
-  // Simulate the race condition that corrupts real-camera recordings:
-  // Call startRecording a second time while the first is still running.
-  // This is what happens when React re-mounts the component (Strict Mode,
-  // HMR, or fast refresh) while getUserMedia is slow (real hardware).
-  // Both MediaRecorders push chunks to the shared ref, producing a
-  // concatenated WebM with two EBML headers.
+  // Navigate triggers useEffect → startRecording() → getUserMedia (delayed).
+  // React Strict Mode in dev will unmount and remount, calling startRecording
+  // again while the first getUserMedia is still in-flight.
+  // The generation counter in startRecording must discard the stale call.
   await page.goto("/recorder");
   await page.waitForLoadState("domcontentloaded");
-  await page.waitForFunction(() => window.__recorderTest?.state === "recording");
+  await page.waitForFunction(
+    () => window.__recorderTest?.state === "recording",
+    null,
+    { timeout: 10_000 }
+  );
 
-  // Start a second recording on the same component (simulates re-mount race)
-  await page.evaluate(async () => {
-    await window.__simulateRemount?.();
+  // Also call simulateRemount to force an extra concurrent startRecording
+  // even if Strict Mode didn't trigger (e.g., production build).
+  // With the 500ms getUserMedia delay, this races with the ongoing call.
+  await page.evaluate(() => {
+    void window.__simulateRemount?.();
   });
-  await page.waitForTimeout(1_500);
+
+  // Wait for recording data to accumulate
+  await page.waitForTimeout(2_000);
 
   const uploadRequestPromise = page.waitForRequest("**/api/recording-upload");
   await page.evaluate(async () => {
@@ -70,26 +86,18 @@ test("uploaded recording contains exactly one WebM session", async ({ page }) =>
   expect(
     ebmlCount,
     [
-      "Repro steps:",
-      "1. Open `/recorder` in dev mode.",
-      "2. Camera initialization takes >200ms (real hardware).",
-      "3. Page reloads or React re-mounts the component.",
-      "4. Two MediaRecorders push chunks to the same shared ref.",
-      "5. Click `Simulate Unity Quit` — the blob contains two WebM streams.",
+      "BUG: Multiple WebM sessions concatenated in one file.",
+      "",
+      "Root cause: React Strict Mode double-mount + async getUserMedia race.",
+      "Mount 1 calls startRecording() → getUserMedia (takes 200-500ms on real camera).",
+      "Cleanup runs → remount calls startRecording() again → ref is still null.",
+      "Both getUserMedia calls resolve → two MediaRecorders share chunksRef.",
+      "",
+      "Fix: generation counter in startRecording. After getUserMedia resolves,",
+      "check if the generation is still current. If not, stop stream and bail.",
       "",
       `Observed EBML headers: ${ebmlCount} (expected 1)`,
-      `Observed upload size: ${uploadData!.length} bytes`,
-      "",
-      "Isolated cause within 10 lines of code in recorder-harness.tsx:",
-      "  useEffect(() => {",
-      "    void startRecording();",
-      "    return () => {",
-      "      // Cleanup only stops tracks but does not abort getUserMedia",
-      "      // or clear chunksRef. A second startRecording() call shares",
-      "      // the same chunksRef, producing two concatenated WebMs.",
-      "      mediaStreamRef.current?.getTracks().forEach(t => t.stop());",
-      "    };",
-      "  }, [startRecording]);"
+      `Observed upload size: ${uploadData!.length} bytes`
     ].join("\n")
   ).toBe(1);
 });
