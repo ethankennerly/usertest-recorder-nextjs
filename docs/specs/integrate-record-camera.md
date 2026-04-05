@@ -1,0 +1,28 @@
+- [ ] Modify `git_hooks/pre-push` to run all automated tests.
+- [ ] Add Playwright and its Chromium browser to dev dependencies.
+- [ ] Edit public repo `.env.local.example` to show example variables.
+- [ ] Launch NextJS with standard local only `.env.local` store secret keys.
+- [ ] Add a Playwright test for auto-start recording on page load.
+- [ ] Add a Playwright test for stop recording on Unity quit.
+- [ ] Launch Chromium with `--use-fake-ui-for-media-stream`.
+- [ ] Launch Chromium with `--use-fake-device-for-media-stream`.
+- [ ] Run the recorder tests in headless Chromium.
+- [ ] Grant camera and microphone permissions for the test origin.
+- [ ] Load the Next.js 16 recorder route in Playwright.
+- [ ] Wait for page load before checking recorder state.
+- [ ] Enable a test-only flag for recorder integration hooks.
+- [ ] Expose `window.__recorderTest.state` in test mode only.
+- [ ] Expose `window.__recorderTest.bytes` in test mode only.
+- [ ] Expose `window.__simulateUnityQuit()` in test mode only.
+- [ ] Assert recorder state becomes `recording` after page load.
+- [ ] Assert recording starts without any user click.
+- [ ] Wait at least 1 second for media data to accumulate.
+- [ ] Assert recorded byte count becomes greater than zero.
+- [ ] Trigger `window.__simulateUnityQuit()` from the test.
+- [ ] Assert recorder state becomes `inactive` after Unity quit.
+- [ ] Assert stop logic runs exactly once after Unity quit.
+- [ ] Assert a finalized recording blob exists after stop.
+- [ ] Assert finalized blob size is greater than zero.
+- [ ] Mock the upload endpoint and assert one upload request is sent.
+- [ ] Assert the upload request uses the expected method and MIME type.
+- [ ] Pass the same integration test locally and in CI.
