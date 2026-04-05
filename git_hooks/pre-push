@@ -8,6 +8,8 @@ unset VSCODE_INSPECTOR_OPTIONS
 
 npm run --silent ci:check
 
+npx playwright test --config=playwright.s3.config.ts recorder-sync.s3.spec.ts || echo "S3 sync skipped or failed (non-blocking)."
+
 if [ -f .vercel/project.json ]; then
 	npm run --silent vercel:pull
 	npm run --silent vercel:build

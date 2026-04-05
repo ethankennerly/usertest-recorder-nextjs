@@ -9,6 +9,7 @@ const config = [
       "coverage/**",
       "node_modules/**",
       "playwright-report/**",
+      "temp/**",
       "test-results/**"
     ]
   },

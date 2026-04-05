@@ -24,9 +24,11 @@ test("recorder upload body is valid WebM payload", async ({ page }) => {
   await page.waitForFunction(() => window.__recorderTest?.state === "recording");
   await page.waitForTimeout(1_200);
 
+  const uploadRequestPromise = page.waitForRequest("**/api/recording-upload");
   await page.evaluate(async () => {
     await window.__simulateUnityQuit?.();
   });
+  await uploadRequestPromise;
 
   await page.waitForFunction(() => window.__recorderTest?.state === "inactive");
 

@@ -454,6 +454,10 @@ export function RecorderHarness() {
       delete window.__simulateUnityQuit;
       delete window.__recorderTest;
     };
+    // startRecording is intentionally excluded: the effect exposes it via
+    // __simulateRemount for tests but must not re-run when startRecording
+    // changes, which would restart the recorder on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stopRecording]);
 
   return (

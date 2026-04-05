@@ -89,6 +89,7 @@ Diagnosis data from S3 recordings:
 - [ ] VS Code IDE Start Debugging and Run Without Debugging launch the dev server.
 - [x] Add a GitHub Actions workflow to run `npm run --silent ci:check`.
 - [x] Modify `git_hooks/pre-push` to run `npm run --silent ci:check`.
+- [x] `git_hooks/pre-push` incrementally syncs recordings from S3 to `temp/recordings/` (skips existing files by size).
 - [x] Install Vercel and configure it to deploy the Next.js 16 app on push.
 - [x] Set up the new Vercel project and link it to the repo.
 - [x] Configure Vercel environment variables for the app, recorder route, and S3 integration.

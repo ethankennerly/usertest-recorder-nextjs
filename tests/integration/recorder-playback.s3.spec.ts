@@ -24,8 +24,6 @@ const liveS3Enabled =
   !bucket.includes("placeholder") &&
   !bucket.includes("replace-me");
 
-const EBML_HEADER = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
-
 function countEbmlHeaders(data: Buffer): number {
   let count = 0;
   let pos = 0;

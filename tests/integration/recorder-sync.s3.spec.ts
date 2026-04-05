@@ -9,7 +9,7 @@ import {
   ListObjectsV2Command,
   S3Client
 } from "@aws-sdk/client-s3";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test } from "@playwright/test";
@@ -35,6 +35,7 @@ test("sync all S3 recordings to temp/recordings/", async () => {
   let continuationToken: string | undefined;
   let totalFiles = 0;
   let totalBytes = 0;
+  let skipped = 0;
 
   do {
     const list = await client.send(
@@ -51,6 +52,17 @@ test("sync all S3 recordings to temp/recordings/", async () => {
       const relativePath = obj.Key.slice(prefix.length + 1);
       const filePath = path.join(outDir, relativePath);
       await mkdir(path.dirname(filePath), { recursive: true });
+
+      // Skip files that already exist locally with the same size.
+      try {
+        const localStat = await stat(filePath);
+        if (obj.Size !== undefined && localStat.size === obj.Size) {
+          skipped++;
+          continue;
+        }
+      } catch {
+        // File doesn't exist locally — download it.
+      }
 
       const get = await client.send(
         new GetObjectCommand({ Bucket: bucket, Key: obj.Key })
@@ -73,7 +85,10 @@ test("sync all S3 recordings to temp/recordings/", async () => {
   } while (continuationToken);
 
   console.log(
-    `Synced ${totalFiles} files (${(totalBytes / 1024 / 1024).toFixed(1)} MB) from s3://${bucket}/${prefix}/ → ${outDir}/`
+    `Synced ${totalFiles} new files (${(totalBytes / 1024 / 1024).toFixed(1)} MB), skipped ${skipped} existing, from s3://${bucket}/${prefix}/ → ${outDir}/`
   );
-  expect(totalFiles, "Expected at least one recording in S3").toBeGreaterThan(0);
+  expect(
+    totalFiles + skipped,
+    "Expected at least one recording in S3"
+  ).toBeGreaterThan(0);
 });
