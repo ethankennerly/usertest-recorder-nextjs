@@ -10,7 +10,7 @@
 - [x] Add `tsconfig.json`, `next-env.d.ts`, `eslint.config.mjs`, and `next.config.ts`.
 - [x] Create root `.env` with placeholder recorder variables.
 - [x] Edit public repo `.env.local.example` to show example variables.
-- [x] Create local-only `.env.local` with test-safe local values.
+- [x] Create local-only `.env.local` with local development values.
 - [x] Create `app/layout.tsx` and a home page for the new repo.
 - [x] Create the Next.js 16 recorder route at `app/recorder/page.tsx`.
 
@@ -48,6 +48,9 @@
 - [x] Configure a dedicated private S3 bucket for recorder uploads.
 - [x] Verify end-to-end from the local dev server to an S3 upload.
 - [x] Verify the uploaded video is privately available and cannot be publicly downloaded from S3.
+- [x] Open browser. Click: Simulate Unity Quit. Observe S3. Expect recording.
+- [x] Use browser with dev app to record and upload a video recording to S3 from the dev server.
+- [ ] VS Code IDE Start Debugging and Run Without Debugging launch the dev server.
 
 ## 4. Add local and hosted automation
 
@@ -56,11 +59,10 @@
 - [x] Install Vercel and configure it to deploy the Next.js 16 app on push.
 - [x] Set up the new Vercel project and link it to the repo.
 - [x] Configure Vercel environment variables for the app, recorder route, and S3 integration.
-- [x] Keep development on mock uploads and preview/production on S3 uploads.
+- [x] Keep deterministic Playwright tests on mock uploads while local development and dedicated S3 integration tests use S3 uploads.
 - [x] Pass Vercel build checks from `git_hooks/pre-push` when the project is linked.
 - [x] Build the linked project locally with `vercel build`.
 - [x] Create a ready Vercel preview deployment that includes the home page and recorder route.
-- [ ] VS Code IDE Start Debugging and Run Without Debugging launch the dev server.
 
 ## 5. Remaining external verification
 

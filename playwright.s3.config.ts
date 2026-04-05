@@ -8,7 +8,7 @@ const baseURL = `http://localhost:${port}`;
 
 export default defineConfig({
   testDir: "./tests/integration",
-  testIgnore: ["**/*.s3.spec.ts"],
+  testMatch: ["**/*.s3.spec.ts"],
   timeout: 30_000,
   expect: {
     timeout: 10_000
@@ -28,7 +28,7 @@ export default defineConfig({
     }
   },
   webServer: {
-    command: "RECORDER_UPLOAD_MODE=mock npm run dev -- --hostname localhost --port 3000",
+    command: "npm run dev -- --hostname localhost --port 3000",
     url: `${baseURL}/recorder`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000

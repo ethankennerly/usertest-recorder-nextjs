@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "playwright test",
-    "test:s3": "playwright test tests/integration/recorder.s3.spec.ts --reporter=line",
+    "test:s3": "playwright test --config=playwright.s3.config.ts --reporter=line",
     "typecheck": "tsc --noEmit",
     "typegen": "next typegen",
     "playwright:install": "playwright install chromium",
