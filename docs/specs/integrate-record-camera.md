@@ -50,10 +50,15 @@
 - [x] Verify the uploaded video is privately available and cannot be publicly downloaded from S3.
 - [x] Open browser. Click: Simulate Unity Quit. Observe S3. Expect recording.
 - [x] Use browser with dev app to record and upload a video recording to S3 from the dev server.
-- [ ] VS Code IDE Start Debugging and Run Without Debugging launch the dev server.
+- [x] Open browser. Record. Click: Simulate Unity Quit. Download from S3. Play the video. Expected: video plays with camera and audio.
+- [x] Automated test records, stops, checks duration > 0, frame count > 1, and both codecs present.
+- [x] Research three professional browser recording projects for how they produce playable WebM files.
+- [x] Apply the fix from professional reference projects (`@fix-webm-duration/fix` adds duration metadata).
+- [ ] Open browser. Record. Download. Play. Verify: camera video and audio replays.
 
 ## 4. Add local and hosted automation
 
+- [ ] VS Code IDE Start Debugging and Run Without Debugging launch the dev server.
 - [x] Add a GitHub Actions workflow to run `npm run --silent ci:check`.
 - [x] Modify `git_hooks/pre-push` to run `npm run --silent ci:check`.
 - [x] Install Vercel and configure it to deploy the Next.js 16 app on push.

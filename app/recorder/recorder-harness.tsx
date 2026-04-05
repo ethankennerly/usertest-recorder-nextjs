@@ -1,5 +1,6 @@
 "use client";
 
+import { fixWebmDuration } from "@fix-webm-duration/fix";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type RecorderUiState = RecordingState | "idle" | "requesting" | "error";
@@ -58,6 +59,7 @@ export function RecorderHarness() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const stopRequestedRef = useRef(false);
+  const recordingStartTimeRef = useRef(0);
 
   const preferredMimeType = useMemo(() => getPreferredMimeType(), []);
 
@@ -119,6 +121,17 @@ export function RecorderHarness() {
 
   const startRecording = useCallback(async () => {
     try {
+      // Stop any existing recorder from a previous mount to prevent
+      // two concurrent recordings sharing the same chunksRef.
+      const prevRecorder = mediaRecorderRef.current;
+      if (prevRecorder && prevRecorder.state !== "inactive") {
+        prevRecorder.onstop = null;
+        prevRecorder.ondataavailable = null;
+        prevRecorder.stop();
+      }
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+      chunksRef.current = [];
+
       updateSnapshot((current) => ({
         ...current,
         state: "requesting",
@@ -136,7 +149,6 @@ export function RecorderHarness() {
 
       mediaStreamRef.current = stream;
       mediaRecorderRef.current = recorder;
-      chunksRef.current = [];
       stopRequestedRef.current = false;
 
       recorder.onstart = () => {
@@ -168,8 +180,13 @@ export function RecorderHarness() {
 
       recorder.onstop = () => {
         void (async () => {
-          const blob = new Blob(chunksRef.current, {
+          const rawBlob = new Blob(chunksRef.current, {
             type: recorder.mimeType || preferredMimeType || "video/webm"
+          });
+
+          const duration = Date.now() - recordingStartTimeRef.current;
+          const blob = await fixWebmDuration(rawBlob, duration, {
+            logger: false
           });
 
           updateSnapshot((current) => ({
@@ -195,6 +212,7 @@ export function RecorderHarness() {
       };
 
       recorder.start(250);
+      recordingStartTimeRef.current = Date.now();
       updateSnapshot((current) => ({
         ...current,
         state: recorder.state
@@ -232,6 +250,10 @@ export function RecorderHarness() {
 
     window.__simulateUnityQuit = async () => {
       await stopRecording();
+    };
+
+    window.__simulateRemount = async () => {
+      await startRecording();
     };
 
     return () => {

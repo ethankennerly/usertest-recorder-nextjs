@@ -3,3 +3,6 @@ Due Time,Goal,Distraction
 2026-04-05 10:00,test: Upload recording to S3,Configure Vercel env var for S3
 2026-04-05 11:00,test: Upload recording to S3,Configure Vercel env var for S3
 2026-04-05 12:00,test: Record video to S3,Debug Next.js API
+2026-04-05 13:00,test: Record video to S3,Debug corrupt video; Spec accurate tests
+2026-04-05 14:00,test: Record video to S3,Isolate corrupt video
+2026-04-05 14:00,test: Record playable video to S3,Spec accurate test of video playback
