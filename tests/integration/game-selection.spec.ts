@@ -26,7 +26,6 @@ test("manifest fetches and contains at least one game", async ({ page }) => {
   const game = config.games[0];
   expect(game).toHaveProperty("folder");
   expect(game).toHaveProperty("name");
-  expect(game).toHaveProperty("icon");
 });
 
 test("game selection page renders buttons matching manifest", async ({

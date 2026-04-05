@@ -8,9 +8,10 @@ type UnityPlayerProps = {
   buildPrefix: string;
   name: string;
   baseUrl: string;
+  onBack?: () => void;
 };
 
-export function UnityPlayer({ folder, buildPrefix, name, baseUrl }: UnityPlayerProps) {
+export function UnityPlayer({ folder, buildPrefix, name, baseUrl, onBack }: UnityPlayerProps) {
   const base = `${baseUrl}/${folder}`;
   const calledQuit = useRef(false);
 
@@ -24,6 +25,13 @@ export function UnityPlayer({ folder, buildPrefix, name, baseUrl }: UnityPlayerP
         preserveDrawingBuffer: true,
       },
     });
+
+  useEffect(() => {
+    document.body.classList.add("game-playing");
+    return () => {
+      document.body.classList.remove("game-playing");
+    };
+  }, []);
 
   useEffect(() => {
     function handleQuit() {
@@ -40,14 +48,26 @@ export function UnityPlayer({ folder, buildPrefix, name, baseUrl }: UnityPlayerP
   const pct = Math.round(loadingProgression * 100);
 
   return (
-    <div data-testid="unity-player" className="card grid">
-      <h2>{name}</h2>
+    <div data-testid="unity-player" className="unity-fullscreen">
+      {onBack && (
+        <button
+          className="unity-back-button"
+          data-testid="back-button"
+          onClick={onBack}
+          type="button"
+          aria-label={`Exit ${name}`}
+        >
+          ✕
+        </button>
+      )}
       {!isLoaded && (
-        <div className="status-pill">Loading... {pct}%</div>
+        <div className="unity-loading-overlay">
+          <div className="status-pill">Loading {name}... {pct}%</div>
+        </div>
       )}
       <Unity
         unityProvider={unityProvider}
-        style={{ width: "100%", aspectRatio: "16/9" }}
+        style={{ width: "100%", height: "100%", flexGrow: 1 }}
       />
     </div>
   );

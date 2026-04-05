@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRecorder } from "../lib/use-recorder";
 import { UnityPlayer } from "./unity-player";
@@ -8,7 +9,7 @@ type GameEntry = {
   folder: string;
   buildPrefix: string;
   name: string;
-  icon: string;
+  icon?: string;
 };
 
 type BuildsConfig = {
@@ -52,36 +53,44 @@ export default function HomePage() {
 
   return (
     <main className="grid">
-      <div className="card grid">
-        <h1>{config.pageTitle}</h1>
-        <p data-testid="page-description">{config.pageDescription}</p>
-      </div>
       {selectedGame ? (
         <UnityPlayer
           folder={selectedGame.folder}
           buildPrefix={selectedGame.buildPrefix}
           name={selectedGame.name}
           baseUrl={config.baseUrl}
+          onBack={() => setSelectedGame(null)}
         />
       ) : (
-        <div className="game-grid">
-          {config.games.map((game) => (
-            <button
-              key={game.folder}
-              className="game-card"
-              data-testid="game-button"
-              onClick={() => setSelectedGame(game)}
-              type="button"
-            >
-              <img
-                className="game-card__icon"
-                src={game.icon}
-                alt={game.name}
-              />
-              <span className="game-card__name">{game.name}</span>
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="card grid">
+            <h1>{config.pageTitle}</h1>
+            <p data-testid="page-description">{config.pageDescription}</p>
+          </div>
+          <div className="game-grid">
+            {config.games.map((game) => (
+              <button
+                key={game.folder}
+                className="game-card"
+                data-testid="game-button"
+                onClick={() => setSelectedGame(game)}
+                type="button"
+              >
+                {game.icon && (
+                  <Image
+                    className="game-card__icon"
+                    src={game.icon}
+                    alt={game.name}
+                    width={160}
+                    height={160}
+                    unoptimized
+                  />
+                )}
+                <span className="game-card__name">{game.name}</span>
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </main>
   );

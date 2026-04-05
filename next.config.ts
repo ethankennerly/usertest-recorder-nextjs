@@ -1,15 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactStrictMode: true,
-  allowedDevOrigins: ["127.0.0.1", "localhost"],
   turbopack: {
-    root: process.cwd(),
+    root: __dirname,
   },
   async headers() {
     return [
       {
-        source: "/(.*)",
+        // COOP/COEP only on root page where Unity WebGL loads.
+        // Do NOT apply globally — breaks getUserMedia on iOS Safari.
+        source: "/",
         headers: [
           {
             key: "Cross-Origin-Opener-Policy",
@@ -20,18 +20,6 @@ const nextConfig: NextConfig = {
             value: "credentialless",
           },
         ],
-      },
-    ];
-  },
-  async rewrites() {
-    return [
-      {
-        source: "/ingest/static/:path*",
-        destination: "https://us-assets.i.posthog.com/static/:path*",
-      },
-      {
-        source: "/ingest/:path*",
-        destination: "https://us.i.posthog.com/:path*",
       },
     ];
   },

@@ -240,6 +240,15 @@ export function useRecorder() {
 
   const startRecording = useCallback(async () => {
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        updateSnapshot((current) => ({
+          ...current,
+          state: "error",
+          error: "Camera not available in this browser.",
+        }));
+        return;
+      }
+
       const generation = ++startGenerationRef.current;
       log("startRecording gen", generation);
 
@@ -260,7 +269,7 @@ export function useRecorder() {
 
       log("getUserMedia requesting, gen", generation);
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
+        video: { facingMode: "user" },
         audio: true,
       });
       log(

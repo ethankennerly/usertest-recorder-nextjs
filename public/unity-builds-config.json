@@ -6,8 +6,7 @@
     {
       "folder": "user-testing/unity/builds/save-life-uitk",
       "buildPrefix": "save-life-uitk",
-      "name": "Save Life",
-      "icon": "user-testing/unity/builds/save-life-uitk/icon.png"
+      "name": "Save Life"
     }
   ]
 }
