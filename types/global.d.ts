@@ -21,5 +21,6 @@ declare global {
     };
     __simulateUnityQuit?: () => Promise<void> | void;
     __simulateRemount?: () => Promise<void> | void;
+    __onUnityGameQuit?: () => void;
   }
 }

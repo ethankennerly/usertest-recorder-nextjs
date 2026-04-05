@@ -1,0 +1,13 @@
+{
+  "pageTitle": "Choose a Game",
+  "pageDescription": "Pick a game below to start your play session. Only if you are comfortable, your camera will record while you play so we can learn how to improve.",
+  "baseUrl": "https://ethankennerly.s3.us-east-2.amazonaws.com",
+  "games": [
+    {
+      "folder": "user-testing/unity/builds/save-life-uitk",
+      "buildPrefix": "save-life-uitk",
+      "name": "Save Life",
+      "icon": "user-testing/unity/builds/save-life-uitk/icon.png"
+    }
+  ]
+}
