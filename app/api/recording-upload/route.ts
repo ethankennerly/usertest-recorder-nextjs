@@ -19,9 +19,12 @@ function getS3Client() {
   });
 }
 
-function getObjectKey() {
+export function getObjectKey() {
   const prefix = process.env.AWS_S3_RECORDINGS_PREFIX || "recordings";
-  return `${prefix}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.webm`;
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10);
+  const time = now.toISOString().slice(11, 19).replace(/:/g, "");
+  return `${prefix}/${date}/${date}T${time}_${randomUUID()}.webm`;
 }
 
 export async function PUT(request: Request) {
@@ -32,7 +35,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      key: "mock/session.webm",
+      key: getObjectKey(),
       target: "mock",
       size: payload.byteLength,
       contentType:

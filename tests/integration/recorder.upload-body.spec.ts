@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { getObjectKey } from "../../app/api/recording-upload/route";
 
 const EBML_HEADER = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
 
@@ -14,7 +15,7 @@ test("recorder upload body is valid WebM payload", async ({ page }) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ ok: true, key: "mock/session.webm", target: "mock" })
+      body: JSON.stringify({ ok: true, key: getObjectKey(), target: "mock" })
     });
   });
 

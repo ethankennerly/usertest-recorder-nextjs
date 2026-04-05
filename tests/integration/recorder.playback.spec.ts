@@ -10,6 +10,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 import { expect, test } from "@playwright/test";
+import { getObjectKey } from "../../app/api/recording-upload/route";
 
 const execFileAsync = promisify(execFile);
 
@@ -41,7 +42,7 @@ test("real browser recording produces a playable WebM", async ({ page }) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ ok: true, key: "mock/repro.webm", target: "mock" })
+      body: JSON.stringify({ ok: true, key: getObjectKey(), target: "mock" })
     });
   });
 

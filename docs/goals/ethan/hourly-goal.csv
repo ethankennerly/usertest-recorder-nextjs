@@ -5,4 +5,6 @@ Due Time,Goal,Distraction
 2026-04-05 12:00,test: Record video to S3,Debug Next.js API
 2026-04-05 13:00,test: Record video to S3,Debug corrupt video; Spec accurate tests
 2026-04-05 14:00,test: Record video to S3,Isolate corrupt video
-2026-04-05 14:00,test: Record playable video to S3,Spec accurate test of video playback
+2026-04-05 15:00,Record playable video to S3,Spec accurate test of video playback
+2026-04-05 16:00,If quiet: audio meter,Debug local machine audio input
+2026-04-05 17:00,test: PostHog: replay session,Debug PostHog integration

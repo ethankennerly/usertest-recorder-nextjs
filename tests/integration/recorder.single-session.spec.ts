@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { getObjectKey } from "../../app/api/recording-upload/route";
 
 const EBML_HEADER = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
 
@@ -41,7 +42,7 @@ test("uploaded recording contains exactly one WebM session", async ({ page }) =>
       contentType: "application/json",
       body: JSON.stringify({
         ok: true,
-        key: "mock/session.webm",
+        key: getObjectKey(),
         target: "mock"
       })
     });

@@ -41,6 +41,15 @@ test("uploads the recorder blob to S3 and keeps it private", async ({ page }) =>
     throw new Error("Expected recorder upload key to be available for S3 verification.");
   }
 
+  // Key format: {prefix}/{date}/{date}T{HHMMSS}_{uuid}.webm
+  // e.g. recordings/2026-04-05/2026-04-05T143527_a1b2c3d4-e5f6-....webm
+  const keyPattern =
+    /^.+\/\d{4}-\d{2}-\d{2}\/\d{4}-\d{2}-\d{2}T\d{6}_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webm$/;
+  expect(
+    key,
+    `S3 key "${key}" should have date-time prefix for sortable filenames`
+  ).toMatch(keyPattern);
+
   const client = new S3Client({ region });
   const head = await client.send(
     new HeadObjectCommand({

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { getObjectKey } from "../../app/api/recording-upload/route";
 
 async function openRecorderPage(page: Page) {
   await page.goto("/recorder");
@@ -42,7 +43,7 @@ test("stops recording on Unity quit and uploads once", async ({ page }) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ ok: true, key: "mock/session.webm", target: "mock" })
+      body: JSON.stringify({ ok: true, key: getObjectKey(), target: "mock" })
     });
   });
 
@@ -73,7 +74,10 @@ test("stops recording on Unity quit and uploads once", async ({ page }) => {
   expect(snapshot?.blobSize ?? 0).toBeGreaterThan(0);
   expect(snapshot?.uploadCount).toBe(1);
   expect(snapshot?.uploadTarget).toBe("mock");
-  expect(snapshot?.uploadKey).toBe("mock/session.webm");
+  // Key format: {prefix}/{date}/{date}T{HHMMSS}_{uuid}.webm
+  expect(snapshot?.uploadKey).toMatch(
+    /^.+\/\d{4}-\d{2}-\d{2}\/\d{4}-\d{2}-\d{2}T\d{6}_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webm$/
+  );
   expect(uploads[0]?.method).toBe("PUT");
   expect(uploads[0]?.url).toContain("/api/recording-upload");
   expect(uploads[0]?.contentType ?? "").toContain("video/webm");
