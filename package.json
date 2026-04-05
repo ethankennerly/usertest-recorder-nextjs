@@ -1,0 +1,32 @@
+{
+  "name": "usertest-recorder-nextjs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "typegen": "next typegen",
+    "playwright:install": "playwright install chromium",
+    "validate:build": "node scripts/validate-build.mjs",
+    "ci:check": "npm run --silent lint && npm test --silent -- --reporter=line && npm run --silent typegen && npm run --silent typecheck && npm run --silent build && npm run --silent validate:build"
+  },
+  "dependencies": {
+    "next": "^16.2.2",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^25.5.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.2",
+    "typescript": "^6.0.2"
+  }
+}

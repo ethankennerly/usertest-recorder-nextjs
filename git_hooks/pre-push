@@ -1,13 +1,9 @@
 #!/bin/sh
 
-set -x
+set -eux
 
 # Unset Node debugger environment variables to prevent interference with git hooks
 unset NODE_OPTIONS
 unset VSCODE_INSPECTOR_OPTIONS
 
-npm run --silent lint &&\
-npm test --silent -- --silent &&\
-npx next typegen && npx tsc --noEmit &&\
-npm run --silent build &&\
-npm run --silent validate:build
+npm run --silent ci:check
