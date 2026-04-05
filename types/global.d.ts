@@ -11,6 +11,8 @@ declare global {
       uploadCount: number;
       uploadMethod: string | null;
       uploadContentType: string | null;
+      uploadTarget: string | null;
+      uploadKey: string | null;
       error: string | null;
     };
     __simulateUnityQuit?: () => Promise<void> | void;

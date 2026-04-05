@@ -24,20 +24,25 @@ test("auto-starts recording on page load", async ({ page }) => {
 });
 
 test("stops recording on Unity quit and uploads once", async ({ page }) => {
-  const uploads: Array<{ method: string; contentType: string | undefined }> = [];
+  const uploads: Array<{
+    method: string;
+    contentType: string | undefined;
+    url: string;
+  }> = [];
 
-  await page.route("**/api/mock-upload", async (route) => {
+  await page.route("**/api/recording-upload", async (route) => {
     const request = route.request();
 
     uploads.push({
       method: request.method(),
-      contentType: request.headers()["content-type"]
+      contentType: request.headers()["content-type"],
+      url: request.url()
     });
 
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ ok: true })
+      body: JSON.stringify({ ok: true, key: "mock/session.webm", target: "mock" })
     });
   });
 
@@ -55,6 +60,9 @@ test("stops recording on Unity quit and uploads once", async ({ page }) => {
 
   await page.waitForFunction(() => window.__recorderTest?.state === "inactive");
   await expect.poll(() => uploads.length).toBe(1);
+  await expect
+    .poll(async () => page.evaluate(() => window.__recorderTest?.uploadCount ?? 0))
+    .toBe(1);
 
   const snapshot = await page.evaluate(() => window.__recorderTest);
 
@@ -64,6 +72,9 @@ test("stops recording on Unity quit and uploads once", async ({ page }) => {
   expect(snapshot?.hasFinalBlob).toBe(true);
   expect(snapshot?.blobSize ?? 0).toBeGreaterThan(0);
   expect(snapshot?.uploadCount).toBe(1);
+  expect(snapshot?.uploadTarget).toBe("mock");
+  expect(snapshot?.uploadKey).toBe("mock/session.webm");
   expect(uploads[0]?.method).toBe("PUT");
+  expect(uploads[0]?.url).toContain("/api/recording-upload");
   expect(uploads[0]?.contentType ?? "").toContain("video/webm");
 });

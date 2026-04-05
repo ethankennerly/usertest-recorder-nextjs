@@ -7,3 +7,10 @@ unset NODE_OPTIONS
 unset VSCODE_INSPECTOR_OPTIONS
 
 npm run --silent ci:check
+
+if [ -f .vercel/project.json ]; then
+	npm run --silent vercel:pull
+	npm run --silent vercel:build
+else
+	echo "Skipping Vercel build: project is not linked yet."
+fi

@@ -5,6 +5,7 @@ const config = [
   {
     ignores: [
       ".next/**",
+      ".vercel/**",
       "coverage/**",
       "node_modules/**",
       "playwright-report/**",

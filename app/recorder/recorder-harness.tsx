@@ -13,6 +13,8 @@ type RecorderSnapshot = {
   uploadCount: number;
   uploadMethod: string | null;
   uploadContentType: string | null;
+  uploadTarget: string | null;
+  uploadKey: string | null;
   error: string | null;
 };
 
@@ -29,6 +31,8 @@ const initialSnapshot: RecorderSnapshot = {
   uploadCount: 0,
   uploadMethod: null,
   uploadContentType: null,
+  uploadTarget: null,
+  uploadKey: null,
   error: null
 };
 
@@ -79,11 +83,18 @@ export function RecorderHarness() {
         throw new Error(`Upload failed with status ${response.status}`);
       }
 
+      const payload = (await response.json()) as {
+        key?: string;
+        target?: string;
+      };
+
       updateSnapshot((current) => ({
         ...current,
         uploadCount: current.uploadCount + 1,
         uploadMethod: "PUT",
-        uploadContentType: contentType
+        uploadContentType: contentType,
+        uploadTarget: payload.target ?? UPLOAD_PATH,
+        uploadKey: payload.key ?? null
       }));
     },
     [updateSnapshot]
@@ -270,6 +281,12 @@ export function RecorderHarness() {
           <span className="metric-label">Upload count</span>
           <span className="metric-value" data-testid="upload-count">
             {snapshot.uploadCount}
+          </span>
+        </li>
+        <li>
+          <span className="metric-label">Upload target</span>
+          <span className="metric-value" data-testid="upload-target">
+            {snapshot.uploadTarget ?? "pending"}
           </span>
         </li>
       </ul>
