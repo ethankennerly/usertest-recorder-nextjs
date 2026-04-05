@@ -65,6 +65,7 @@ How the pros test mobile in CI:
 
 - [x] Spreading `devices['iPhone 13']` directly into `test.use()` selects WebKit browser, which isn't installed. Fix: only use `viewport`, `userAgent`, `isMobile`, `hasTouch` from the device descriptor — keeps Chromium as the browser.
 - [x] Stale Turbopack `.next` cache after editing `next.config.ts` causes "Could not find module in React Client Manifest" — server hangs, tests time out. Fix: `rm -rf .next` before restarting.
+- [x] PostHog `/ingest/*` rewrites were in `vercel.json` but missing from `next.config.ts`. The spec checklist marked this as done (`[x]`) but the code was never applied. On mobile via dev server network URL, PostHog 404s flooded the page, and on real devices the page stayed stuck on "Loading games..." forever. 17/17 Playwright tests passed because they didn't check for 404 responses. Fix: added `async rewrites()` to `next.config.ts` mirroring `vercel.json`, and added a Playwright test asserting zero 404 responses on mobile page load.
 
 ## Manual mobile verification checklist
 

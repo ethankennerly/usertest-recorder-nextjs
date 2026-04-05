@@ -28,6 +28,8 @@
 
 - [x] Add Next.js rewrites in `next.config.ts`: `/ingest/static/:path*` →
   PostHog assets CDN, `/ingest/:path*` → `https://us.i.posthog.com/:path*`.
+  (Previously marked done but code was missing — restored and verified with
+  zero-404 Playwright test.)
 - [x] Add equivalent edge rewrites in `vercel.json` so Vercel routes
   PostHog traffic first-party without hitting the Next.js server.
 - [ ] Verify in devtools: PostHog requests use `/ingest/...` (same origin, not

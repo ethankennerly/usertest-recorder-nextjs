@@ -103,3 +103,22 @@ test("back button exits fullscreen and returns to game grid", async ({
   );
   expect(noGamePlaying).toBe(true);
 });
+
+test("page load produces no 404 responses on mobile", async ({ page }) => {
+  const responses404: string[] = [];
+  page.on("response", (res) => {
+    if (res.status() === 404) {
+      responses404.push(res.url());
+    }
+  });
+
+  await page.goto("/");
+  await page.waitForSelector("[data-testid='game-button']", {
+    timeout: 10_000,
+  });
+
+  // Wait for async PostHog requests to settle
+  await page.waitForLoadState("networkidle");
+
+  expect(responses404).toEqual([]);
+});
