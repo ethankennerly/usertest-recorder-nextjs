@@ -5,6 +5,7 @@
   "scripts": {
     "prepare": "git config core.hooksPath git_hooks",
     "dev": "next dev",
+    "dev:https": "sh scripts/dev-https-lan.sh",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

@@ -16,6 +16,7 @@ Key takeaway: none of the reference apps (Vercel.com, Cal.com, Dub.co, ethankenn
 - [x] Apply COOP `same-origin` only to the route that loads Unity WebGL.
 - [x] Apply COEP `credentialless` only to the route that loads Unity WebGL.
 - [x] Verify `/recorder` does NOT return COOP or COEP headers (confirmed via curl).
+- [ ] Verify `getUserMedia` actually works on `/` with COOP/COEP present on mobile Safari. **BLOCKED**: Accessing dev server via `http://10.0.0.41:3000` is NOT a secure context. `navigator.mediaDevices` is `undefined` on insecure origins (only `localhost` is exempt). COOP/COEP is NOT the cause. Fix: use HTTPS for mobile dev testing.
 
 ## Guard browser APIs
 
@@ -40,6 +41,24 @@ These extend the fullscreen layout in `load-unity-web.md` with mobile-specific c
 - [x] Landscape orientation: game fills height, shows wider field of view.
 - [x] Test: Unity canvas fills viewport on mobile 390px width (Playwright, confirmed `position: fixed; width: 390px; height: 664px`).
 - [ ] Test: no scrolling or bouncing during gameplay on real iOS Safari.
+
+## getUserMedia requires secure context (HTTPS)
+
+`getUserMedia` requires a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts). `http://10.0.0.41:3000` (network IP over HTTP) is NOT secure — only `localhost` is exempt. On insecure origins, `navigator.mediaDevices` is `undefined`, so the camera prompt never appears.
+
+**iOS Chrome is WebKit** — Apple requires all iOS browsers to use the WebKit engine. Camera access works on iOS Chrome, iOS Safari, and all iOS browsers, but ONLY over HTTPS. This is not a browser limitation — it is a secure context requirement.
+
+**`next dev --experimental-https` alone won't work for LAN IP access** — the auto-generated self-signed cert covers only `localhost`. Accessing `https://10.0.0.41:3000` with that cert gives `ERR_SSL_PROTOCOL_ERROR`. Fix: use `mkcert` to generate a cert that includes LAN IPs as Subject Alternative Names.
+
+**Mobile devices also need the mkcert root CA installed** to trust the self-signed cert. Export with `mkcert -CAROOT` and install the `rootCA.pem` on the device.
+
+- [x] Add `dev:https` script using `mkcert` + `--experimental-https` for mobile LAN testing.
+- [x] Display `snapshot.error` on `/` page so users see "Camera requires HTTPS" instead of silent failure.
+- [x] Verbose logging: when `NEXT_PUBLIC_RECORDER_VERBOSE=true`, log `isSecureContext`, `protocol`, `hostname`, and `navigator.mediaDevices` presence.
+- [x] Regression guard: test that `dev:https` script uses both `mkcert` and `--experimental-https`.
+- [ ] Install mkcert root CA on iOS test device (Settings > General > Profile). Document procedure.
+- [ ] Verify camera prompt appears on iOS Safari via `https://10.0.0.41:3000`.
+- [ ] Verify camera prompt appears on iOS Chrome via `https://10.0.0.41:3000`.
 
 ## getUserMedia constraints for mobile
 
@@ -67,6 +86,7 @@ How the pros test mobile in CI:
 - [x] Stale Turbopack `.next` cache after editing `next.config.ts` causes "Could not find module in React Client Manifest" — server hangs, tests time out. Fix: `rm -rf .next` before restarting.
 - [x] PostHog `/ingest/*` rewrites were in `vercel.json` but missing from `next.config.ts`. The spec checklist marked this as done (`[x]`) but the code was never applied. On mobile via dev server network URL, PostHog 404s flooded the page, and on real devices the page stayed stuck on "Loading games..." forever. 17/17 Playwright tests passed because they didn't check for 404 responses. Fix: added `async rewrites()` to `next.config.ts` mirroring `vercel.json`, and added a Playwright test asserting zero 404 responses on mobile page load.
 - [x] Rewriting `next.config.ts` dropped `reactStrictMode: true` and `allowedDevOrigins: ["127.0.0.1", "localhost"]`. Without `allowedDevOrigins`, the Next.js dev server rejects requests from mobile devices on the local network. Playwright emulation tests passed because they use `localhost`, not the network IP. Fix: restored both options. Added a test that asserts `next.config.ts` contains `allowedDevOrigins`.
+- [x] `dev:https` script was set to `next dev --experimental-https`, which auto-generates a cert for `localhost` only. Accessing `https://10.0.0.41:3000` from mobile fails with `ERR_SSL_PROTOCOL_ERROR` because the cert doesn't include the LAN IP. Error message said "Camera not available in this browser" without explaining the HTTPS requirement. Fix: replaced with `mkcert`-based script that includes all LAN IPs in the cert SAN. Updated error message to say "Camera requires HTTPS" when on insecure origin. Added verbose logging of `isSecureContext`, `protocol`, and `hostname`.
 
 ## next.config.ts regression guard
 

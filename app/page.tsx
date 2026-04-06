@@ -25,7 +25,7 @@ const CONFIG_URL =
 export default function HomePage() {
   const [config, setConfig] = useState<BuildsConfig | null>(null);
   const [selectedGame, setSelectedGame] = useState<GameEntry | null>(null);
-  const { stopRecording } = useRecorder();
+  const { snapshot, stopRecording } = useRecorder();
 
   useEffect(() => {
     fetch(CONFIG_URL)
@@ -90,6 +90,11 @@ export default function HomePage() {
               </button>
             ))}
           </div>
+          {snapshot.error && (
+            <p className="error-text" data-testid="recorder-error">
+              {snapshot.error}
+            </p>
+          )}
         </>
       )}
     </main>

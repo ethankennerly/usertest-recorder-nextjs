@@ -5,6 +5,9 @@ import { resolve } from "path";
 const configPath = resolve(__dirname, "../../next.config.ts");
 const configSource = readFileSync(configPath, "utf-8");
 
+const packageJsonPath = resolve(__dirname, "../../package.json");
+const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+
 test("next.config.ts contains reactStrictMode", () => {
   expect(configSource).toContain("reactStrictMode: true");
 });
@@ -31,4 +34,14 @@ test("next.config.ts contains PostHog ingest rewrites", () => {
   expect(configSource).toContain("us-assets.i.posthog.com");
   expect(configSource).toContain("/ingest/:path*");
   expect(configSource).toContain("us.i.posthog.com");
+});
+
+test("package.json has dev:https script for mobile camera testing", () => {
+  expect(packageJson.scripts["dev:https"]).toBeDefined();
+  const scriptSource = readFileSync(
+    resolve(__dirname, "../../scripts/dev-https-lan.sh"),
+    "utf-8",
+  );
+  expect(scriptSource).toContain("--experimental-https");
+  expect(scriptSource).toContain("mkcert");
 });

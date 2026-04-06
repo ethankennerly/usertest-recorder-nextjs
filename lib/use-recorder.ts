@@ -241,10 +241,29 @@ export function useRecorder() {
   const startRecording = useCallback(async () => {
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
+        const isInsecure =
+          typeof window !== "undefined" &&
+          window.location.protocol === "http:" &&
+          window.location.hostname !== "localhost" &&
+          window.location.hostname !== "127.0.0.1";
+        const reason = isInsecure
+          ? `Camera requires HTTPS. This page is loaded over HTTP (${window.location.origin}). Use HTTPS or localhost.`
+          : "Camera not available in this browser.";
+        log(
+          "getUserMedia unavailable.",
+          "isSecureContext:",
+          typeof window !== "undefined" && window.isSecureContext,
+          "protocol:",
+          typeof window !== "undefined" && window.location.protocol,
+          "hostname:",
+          typeof window !== "undefined" && window.location.hostname,
+          "navigator.mediaDevices:",
+          typeof navigator !== "undefined" && !!navigator.mediaDevices,
+        );
         updateSnapshot((current) => ({
           ...current,
           state: "error",
-          error: "Camera not available in this browser.",
+          error: reason,
         }));
         return;
       }
