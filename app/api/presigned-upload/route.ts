@@ -25,20 +25,28 @@ export async function GET(request: Request) {
     });
   }
 
-  const client = getS3Client();
-  const bucket = getS3Bucket();
-  const command = new PutObjectCommand({
-    Bucket: bucket,
-    Key: key,
-    ContentType: contentType,
-    Metadata: posthogSessionId
-      ? { "posthog-session-id": posthogSessionId }
-      : undefined,
-  });
+  try {
+    const client = getS3Client();
+    const bucket = getS3Bucket();
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ContentType: contentType,
+      Metadata: posthogSessionId
+        ? { "posthog-session-id": posthogSessionId }
+        : undefined,
+    });
 
-  const url = await getSignedUrl(client, command, {
-    expiresIn: 300,
-  });
+    const url = await getSignedUrl(client, command, {
+      expiresIn: 300,
+    });
 
-  return NextResponse.json({ url, key, target: "s3" });
+    return NextResponse.json({ url, key, target: "s3" });
+  } catch (error) {
+    console.error("[presigned-upload]", error);
+    return NextResponse.json(
+      { error: "Failed to generate presigned URL" },
+      { status: 500 },
+    );
+  }
 }

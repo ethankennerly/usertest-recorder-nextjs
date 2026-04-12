@@ -85,7 +85,12 @@ export async function buildFinalBlob(
   const blobType = mimeType || "video/webm";
   const raw = new Blob(chunks, { type: blobType });
   const dur = Date.now() - startTime;
-  log("buildFinalBlob:", raw.size, "bytes", dur, "ms");
+  log(
+    "buildFinalBlob:",
+    raw.size, "bytes",
+    dur, "ms",
+    chunks.length, "chunks",
+  );
   if (isWebm(blobType)) {
     return fixWebmDuration(raw, dur, { logger: false });
   }

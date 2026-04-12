@@ -23,7 +23,11 @@ export function useRecorderLifecycle(
     void start();
     return () => {
       mountedRef.current = false;
-      if (rec && rec.state !== "inactive") rec.stop();
+      if (rec && rec.state !== "inactive") {
+        rec.onstop = null;
+        rec.ondataavailable = null;
+        rec.stop();
+      }
       clearTm();
       stopAudio();
       stream?.getTracks().forEach((t) => t.stop());

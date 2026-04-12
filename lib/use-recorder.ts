@@ -214,6 +214,16 @@ export function useRecorder() {
         }));
       rec.onstop = () => {
         stopAudio();
+        if (gen !== genRef.current) {
+          log(
+            "stale onstop, gen:", gen,
+            "current:", genRef.current,
+          );
+          stream.getTracks().forEach(
+            (t) => t.stop(),
+          );
+          return;
+        }
         void onRecorderStop(rec, stream);
       };
 
