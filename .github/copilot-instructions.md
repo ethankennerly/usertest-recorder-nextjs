@@ -17,7 +17,12 @@ Always proceed in strict order:
 
 ## Model-View Controller (MVC) Architecture
 
-- Always extract logic code to pure TypeScript
+- Always extract logic code to pure lib TypeScript files
+- Pure lib TypeScript files have no React imports and no JSX
+- Pure lib TypeScript files are easily unit-tested with Vitest
+- Whenever code could go in hooks or lib, prefer lib
+- Always extract minimal hooks to hooks TypeScript files
+- Minimize lines of code in hooks by calling pure lib functions
 - Always extract minimal UI to React components
 - Never write logic in React components
 - Always minimize React components to data visualization and input binding

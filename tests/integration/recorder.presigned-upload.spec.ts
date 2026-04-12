@@ -46,7 +46,6 @@ test(
 
     await page.waitForFunction(
       () =>
-        window.__recorderTest?.state === "inactive" &&
         (window.__recorderTest?.uploadCount ?? 0) > 0,
       null,
       { timeout: 10_000 },

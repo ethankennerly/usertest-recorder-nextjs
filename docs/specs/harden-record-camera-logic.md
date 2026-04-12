@@ -2,15 +2,15 @@
 
 ## Process
 
-- [ ] Proceed from top to bottom
-- [ ] Research limitations of Vercel such as file size
-- [ ] Research limitations of mobile
-- [ ] Research limitations of Chrome
-- [ ] Research limitations of Mac
-- [ ] Research limitations of Windows
-- [ ] Research 3 pro solutions
-- [ ] Research 16 edge cases
-- [ ] Add undiscovered edge cases to this tech spec
+- [x] Proceed from top to bottom
+- [x] Research limitations of Vercel such as file size
+- [x] Research limitations of mobile
+- [x] Research limitations of Chrome
+- [x] Research limitations of Mac
+- [x] Research limitations of Windows
+- [x] Research 3 pro solutions
+- [x] Research 16 edge cases
+- [x] Add undiscovered edge cases to this tech spec
 
 ## Clarify Permissions
 
@@ -22,33 +22,43 @@
 ## Reduce Recording Overhead
 
 - [x] Record directly from browser to S3
-- [ ] Reduce bitrate for less client overhead
-- [ ] Reduce bitrate for smaller upload
-- 
+- [x] Reduce bitrate for less client overhead
+- [x] Reduce bitrate for smaller upload
 
 ## Any Condition to Upload
 
-- [ ] On any of the following conditions, stop recording and upload
+- [x] On any of the following conditions, stop recording and upload
 
 ### Upload On Game Session Ended
 
 React to any event that might end a game session:
 
-- [ ] Unity quit event
-- [ ] Recorder page unload
-- [ ] Navigation away from game page
-- [ ] Game page unload
-- [ ] Game exit
-- [ ] Browser quit
-- [ ] Browser tab close
-- [ ] Browser refresh
+- [x] Unity quit event
+- [x] Recorder page unload
+- [x] Navigation away from game page
+- [x] Game page unload
+- [x] Game exit
+- [x] Browser quit
+- [x] Browser tab close
+- [x] Browser refresh
 
 ### Upload On Size or Time
 
-- [ ] Estimated recording size exceeds 20 MB
-- [ ] Estimated recording time exceeds 20 seconds
+- [x] Estimated recording size exceeds 20 MB
+- [x] Estimated recording time exceeds 20 seconds
 
 ## Upload
 
-- [ ] Upload the recording to S3 directly
-- [ ] If the browser page is still open, start a new recording
+- [x] Upload the recording to S3 directly
+- [x] If the browser page is still open, start a new recording
+
+## Edge Cases
+
+- [x] Permission revocation or device disconnect mid-recording
+- [ ] iOS Safari only supports MP4, not WebM
+- [ ] Tab backgrounding throttles timeslice callbacks
+- [ ] Screen lock revokes camera on mobile
+- [ ] Empty blob from rapid start/stop
+- [ ] S3 presigned URL expiry on long recordings
+- [ ] Codec negotiation fallback chain
+- [ ] Network failure retry with backoff

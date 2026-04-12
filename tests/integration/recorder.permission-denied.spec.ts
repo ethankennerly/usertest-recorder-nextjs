@@ -5,7 +5,7 @@ test("shows camera and microphone permission errors when getUserMedia is denied"
     const original = navigator.mediaDevices.getUserMedia.bind(
       navigator.mediaDevices,
     );
-    navigator.mediaDevices.getUserMedia = async (constraints) => {
+    navigator.mediaDevices.getUserMedia = async () => {
       const error = new DOMException(
         "Permission denied",
         "NotAllowedError",

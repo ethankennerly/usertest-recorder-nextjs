@@ -71,7 +71,6 @@ test(
 
     await page.waitForFunction(
       () =>
-        window.__recorderTest?.state === "inactive" &&
         (window.__recorderTest?.uploadCount ?? 0) > 0,
       null,
       { timeout: 10_000 },
@@ -80,7 +79,6 @@ test(
     const snapshot = await page.evaluate(
       () => window.__recorderTest,
     );
-    expect(snapshot?.state).toBe("inactive");
     expect(snapshot?.uploadCount).toBeGreaterThanOrEqual(1);
   },
 );

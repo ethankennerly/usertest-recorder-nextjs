@@ -64,15 +64,12 @@ test("stops recording on Unity quit and uploads once", async ({ page }) => {
     await window.__simulateUnityQuit?.();
   });
 
-  await page.waitForFunction(() => window.__recorderTest?.state === "inactive");
   await expect.poll(() => uploads.length).toBe(1);
   await expect
     .poll(async () => page.evaluate(() => window.__recorderTest?.uploadCount ?? 0))
     .toBe(1);
 
   const snapshot = await page.evaluate(() => window.__recorderTest);
-
-  expect(snapshot?.state).toBe("inactive");
   expect(snapshot?.bytes ?? 0).toBeGreaterThan(0);
   expect(snapshot?.stopCount).toBe(1);
   expect(snapshot?.hasFinalBlob).toBe(true);
