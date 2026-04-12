@@ -12,4 +12,5 @@ Due Time,Goal,Distraction
 2026-04-05 19:00,Mobile record,Hallucinate; Debug regression to load mobile
 2026-04-05 20:00,Mobile record,Hallucinate; Debug mobile layout
 2026-04-05 21:00,Mobile record,Hallucinate; Debug secure camera
-2026-04-12 08:00,Audit empty mobile recording
+2026-04-12 08:00,Audit empty mobile recording,Resolve config and vercel env warnings
+2026-04-12 09:00,Observe mobile recording with MIME type,
