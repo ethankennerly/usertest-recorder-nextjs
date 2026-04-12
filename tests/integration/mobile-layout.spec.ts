@@ -1,5 +1,18 @@
 import { devices, expect, test } from "@playwright/test";
 
+/** Mock Unity loader that defines window.createUnityInstance so
+ *  react-unity-webgl initializes without console.error warnings. */
+const MOCK_UNITY_LOADER = `
+  window.createUnityInstance = function(canvas, config, onProgress) {
+    if (onProgress) onProgress(1);
+    return Promise.resolve({
+      Module: { canvas: canvas },
+      Quit: function() { return Promise.resolve(); },
+      SendMessage: function() {},
+    });
+  };
+`;
+
 // Use Chromium with iPhone 13 viewport/user-agent (not WebKit — not installed).
 // This catches layout/responsive issues; real Safari testing is manual.
 const iPhone = devices["iPhone 13"];
@@ -39,7 +52,7 @@ test("fullscreen container fills mobile viewport during gameplay", async ({
     await route.fulfill({
       status: 200,
       contentType: "application/javascript",
-      body: "// mock",
+      body: MOCK_UNITY_LOADER,
     });
   });
 
@@ -84,7 +97,7 @@ test("back button exits fullscreen and returns to game grid", async ({
     await route.fulfill({
       status: 200,
       contentType: "application/javascript",
-      body: "// mock",
+      body: MOCK_UNITY_LOADER,
     });
   });
 

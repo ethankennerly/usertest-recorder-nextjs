@@ -1,6 +1,19 @@
 import { expect, test, type Page } from "@playwright/test";
 import { getObjectKey } from "../../app/api/recording-upload/route";
 
+/** Mock Unity loader that defines window.createUnityInstance so
+ *  react-unity-webgl initializes without console.error warnings. */
+const MOCK_UNITY_LOADER = `
+  window.createUnityInstance = function(canvas, config, onProgress) {
+    if (onProgress) onProgress(1);
+    return Promise.resolve({
+      Module: { canvas: canvas },
+      Quit: function() { return Promise.resolve(); },
+      SendMessage: function() {},
+    });
+  };
+`;
+
 async function openGameSelectionPage(page: Page) {
   await page.goto("/");
   await page.waitForLoadState("domcontentloaded");
@@ -69,13 +82,14 @@ test("camera recording starts automatically on root page", async ({
 test("clicking a game button triggers Unity WebGL load", async ({ page }) => {
   const unityRequests: string[] = [];
 
-  // Intercept Unity build file requests
+  // Intercept Unity build file requests and provide a mock createUnityInstance
+  // so react-unity-webgl doesn't log "Error initializing Unity instance".
   await page.route("**/*.loader.js", async (route) => {
     unityRequests.push(route.request().url());
     await route.fulfill({
       status: 200,
       contentType: "application/javascript",
-      body: "// mock unity loader",
+      body: MOCK_UNITY_LOADER,
     });
   });
 
@@ -111,7 +125,7 @@ test("Unity quit stops recording and triggers upload", async ({ page }) => {
     await route.fulfill({
       status: 200,
       contentType: "application/javascript",
-      body: "// mock unity loader",
+      body: MOCK_UNITY_LOADER,
     });
   });
 

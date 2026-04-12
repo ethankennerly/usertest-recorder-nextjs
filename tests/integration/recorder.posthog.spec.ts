@@ -13,7 +13,11 @@ async function recordAndUpload(page: import("@playwright/test").Page) {
   });
   await uploadRequestPromise;
 
-  await page.waitForFunction(() => window.__recorderTest?.state === "inactive");
+  await page.waitForFunction(
+    () =>
+      window.__recorderTest?.state === "inactive" &&
+      (window.__recorderTest?.uploadCount ?? 0) > 0,
+  );
 }
 
 test(

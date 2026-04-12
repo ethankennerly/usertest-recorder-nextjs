@@ -56,9 +56,9 @@ These extend the fullscreen layout in `load-unity-web.md` with mobile-specific c
 - [x] Display `snapshot.error` on `/` page so users see "Camera requires HTTPS" instead of silent failure.
 - [x] Verbose logging: when `NEXT_PUBLIC_RECORDER_VERBOSE=true`, log `isSecureContext`, `protocol`, `hostname`, and `navigator.mediaDevices` presence.
 - [x] Regression guard: test that `dev:https` script uses both `mkcert` and `--experimental-https`.
-- [ ] Install mkcert root CA on iOS test device (Settings > General > Profile). Document procedure.
-- [ ] Verify camera prompt appears on iOS Safari via `https://10.0.0.41:3000`.
-- [ ] Verify camera prompt appears on iOS Chrome via `https://10.0.0.41:3000`.
+- [x] Install mkcert root CA on iOS test device (Settings > General > Profile). Document procedure.
+- [x] Verify camera prompt appears on iOS Safari via `https://10.0.0.41:3000`.
+- [x] Verify camera prompt appears on iOS Chrome via `https://10.0.0.41:3000`.
 
 ## getUserMedia constraints for mobile
 

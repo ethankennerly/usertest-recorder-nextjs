@@ -21,6 +21,9 @@ export function UnityPlayer({ folder, buildPrefix, name, baseUrl, onBack }: Unit
       dataUrl: `${base}/${buildPrefix}.data`,
       frameworkUrl: `${base}/${buildPrefix}.framework.js`,
       codeUrl: `${base}/${buildPrefix}.wasm`,
+      companyName: "UserTest Recorder",
+      productName: name,
+      productVersion: "1.0",
       webglContextAttributes: {
         preserveDrawingBuffer: true,
       },

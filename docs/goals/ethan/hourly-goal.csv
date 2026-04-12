@@ -7,4 +7,9 @@ Due Time,Goal,Distraction
 2026-04-05 14:00,test: Record video to S3,Isolate corrupt video
 2026-04-05 15:00,Record playable video to S3,Spec accurate test of video playback
 2026-04-05 16:00,If quiet: audio meter,Debug local machine audio input
-2026-04-05 17:00,test: PostHog: replay session,Debug PostHog integration
+2026-04-05 17:00,test: PostHog: replay session,Hallucinate
+2026-04-05 18:00,test: Unity Save Life Displayed,Hallucinate
+2026-04-05 19:00,Mobile record,Hallucinate; Debug regression to load mobile
+2026-04-05 20:00,Mobile record,Hallucinate; Debug mobile layout
+2026-04-05 21:00,Mobile record,Hallucinate; Debug secure camera
+2026-04-12 08:00,Audit empty mobile recording

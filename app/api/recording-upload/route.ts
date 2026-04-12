@@ -51,6 +51,30 @@ export async function PUT(request: Request) {
   const key = getObjectKey();
   const body = Buffer.from(await request.arrayBuffer());
 
+  if (body.byteLength === 0) {
+    return NextResponse.json(
+      { ok: false, error: "Empty recording body. Upload rejected." },
+      { status: 400 }
+    );
+  }
+
+  // Validate EBML magic bytes: a valid WebM file starts with 0x1A45DFA3.
+  // A truncated upload (e.g. tab closed mid-fetch) may deliver non-zero but
+  // corrupted bytes that would otherwise be stored to S3.
+  const EBML_MAGIC = [0x1a, 0x45, 0xdf, 0xa3];
+  if (
+    body.byteLength < EBML_MAGIC.length ||
+    body[0] !== EBML_MAGIC[0] ||
+    body[1] !== EBML_MAGIC[1] ||
+    body[2] !== EBML_MAGIC[2] ||
+    body[3] !== EBML_MAGIC[3]
+  ) {
+    return NextResponse.json(
+      { ok: false, error: "Invalid WebM: missing EBML header." },
+      { status: 400 }
+    );
+  }
+
   await client.send(
     new PutObjectCommand({
       Bucket: bucket,

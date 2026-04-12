@@ -350,6 +350,13 @@ export function useRecorder() {
           });
 
           const duration = Date.now() - recordingStartTimeRef.current;
+          log(
+            "onstop: rawBlob.size:",
+            rawBlob.size,
+            "duration:",
+            duration,
+            "ms",
+          );
           const blob = await fixWebmDuration(rawBlob, duration, {
             logger: false,
           });
