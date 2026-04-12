@@ -1,11 +1,27 @@
 # Instructions for GitHub Copilot
 
+- Always proceed in strict order, from first line to last line
+
+## Research
+
+- Always search for project that professionals agree uses a best practice
+- Always cite the essential code in a pro solution
+- Always cite missing QA steps to reproduce that would isolate the trigger
+
+## Observability Driven Development (ODD) Steps
+
+- Always use a verbose log config to enable a verbose log
+- If verbose, always log to the Next.js server
+- Never log or allocate garbage if not verbose
+- Always log each major step of the logic with a unique message
+- Always log sufficiently to reconstruct steps to reproduce a potential bug
+- Never hypothesize a cause without a log that supports it
+- Always add a log first, reproduce the bug, read the log
+- Always disprove each hypothesis with log evidence before coding a fix
+- Never skip: log first, test next, fix last
+
 ## Test Driven Development (TDD) Steps
 
-Always proceed in strict order:
-
-- Always research a pro solution
-- Always cite missing QA steps to reproduce that would isolate the trigger
 - Always discover practical tests
 - Always replace inaccurate tests
 - Always test logic thoroughly
@@ -51,5 +67,5 @@ Always proceed in strict order:
 
 ## Acknowledge Instructions
 
-- Always prepend 'TDD1:' to every chat response
+- Always prepend 'ODD2:' to every chat response
 - Always limit chat response to <512 characters

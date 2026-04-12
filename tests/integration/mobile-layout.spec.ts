@@ -85,38 +85,6 @@ test("fullscreen container fills mobile viewport during gameplay", async ({
   expect(scrollbar).toBe(false);
 });
 
-test("back button exits fullscreen and returns to game grid", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await page.waitForSelector("[data-testid='game-button']", {
-    timeout: 10_000,
-  });
-
-  await page.route("**/*.loader.js", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/javascript",
-      body: MOCK_UNITY_LOADER,
-    });
-  });
-
-  await page.locator("[data-testid='game-button']").first().click();
-  await page.waitForSelector("[data-testid='back-button']", {
-    timeout: 5_000,
-  });
-
-  await page.locator("[data-testid='back-button']").click();
-  await page.waitForSelector("[data-testid='game-button']", {
-    timeout: 5_000,
-  });
-
-  const noGamePlaying = await page.evaluate(
-    () => !document.body.classList.contains("game-playing")
-  );
-  expect(noGamePlaying).toBe(true);
-});
-
 test("page load produces no 404 responses on mobile", async ({ page }) => {
   const responses404: string[] = [];
   page.on("response", (res) => {

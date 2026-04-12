@@ -2,20 +2,23 @@
 
 import { useEffect, useRef } from "react";
 import { Unity, useUnityContext } from "react-unity-webgl";
+import { log } from "../lib/recorder-log";
+import { exitUnity } from "../lib/unity-exit";
 
 type UnityPlayerProps = {
   folder: string;
   buildPrefix: string;
   name: string;
   baseUrl: string;
-  onBack?: () => void;
+  stopFinal: () => Promise<void>;
+  onDone: () => void;
 };
 
-export function UnityPlayer({ folder, buildPrefix, name, baseUrl, onBack }: UnityPlayerProps) {
+export function UnityPlayer({ folder, buildPrefix, name, baseUrl, stopFinal, onDone }: UnityPlayerProps) {
   const base = `${baseUrl}/${folder}`;
   const calledQuit = useRef(false);
 
-  const { unityProvider, loadingProgression, isLoaded, addEventListener, removeEventListener } =
+  const { unityProvider, loadingProgression, isLoaded, addEventListener, removeEventListener, unload } =
     useUnityContext({
       loaderUrl: `${base}/${buildPrefix}.loader.js`,
       dataUrl: `${base}/${buildPrefix}.data`,
@@ -27,14 +30,39 @@ export function UnityPlayer({ folder, buildPrefix, name, baseUrl, onBack }: Unit
       webglContextAttributes: {
         preserveDrawingBuffer: true,
       },
+      cacheControl: () => "no-store",
     });
 
   useEffect(() => {
+    log("UnityPlayer: mounted", name);
     document.body.classList.add("game-playing");
-    return () => {
-      document.body.classList.remove("game-playing");
+
+    const canvas = document.querySelector("canvas");
+    const onLost = (e: Event) => {
+      e.preventDefault();
+      log("UnityPlayer: webglcontextlost");
     };
-  }, []);
+    const onRestored = () => {
+      log("UnityPlayer: webglcontextrestored");
+    };
+    canvas?.addEventListener(
+      "webglcontextlost", onLost,
+    );
+    canvas?.addEventListener(
+      "webglcontextrestored", onRestored,
+    );
+
+    return () => {
+      log("UnityPlayer: unmounting", name);
+      document.body.classList.remove("game-playing");
+      canvas?.removeEventListener(
+        "webglcontextlost", onLost,
+      );
+      canvas?.removeEventListener(
+        "webglcontextrestored", onRestored,
+      );
+    };
+  }, [name]);
 
   useEffect(() => {
     function handleQuit() {
@@ -52,17 +80,17 @@ export function UnityPlayer({ folder, buildPrefix, name, baseUrl, onBack }: Unit
 
   return (
     <div data-testid="unity-player" className="unity-fullscreen">
-      {onBack && (
-        <button
-          className="unity-back-button"
-          data-testid="back-button"
-          onClick={onBack}
-          type="button"
-          aria-label={`Exit ${name}`}
-        >
-          ✕
-        </button>
-      )}
+      <button
+        className="unity-back-button"
+        data-testid="back-button"
+        onClick={() =>
+          void exitUnity(unload, stopFinal, onDone)
+        }
+        type="button"
+        aria-label={`Exit ${name}`}
+      >
+        ✕
+      </button>
       {!isLoaded && (
         <div className="unity-loading-overlay">
           <div className="status-pill">Loading {name}... {pct}%</div>

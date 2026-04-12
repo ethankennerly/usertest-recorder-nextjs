@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRecorder } from "../lib/use-recorder";
+import { log } from "../lib/recorder-log";
 import { UnityPlayer } from "./unity-player";
 
 type GameEntry = {
@@ -25,13 +26,40 @@ const CONFIG_URL =
 export default function HomePage() {
   const [config, setConfig] = useState<BuildsConfig | null>(null);
   const [selectedGame, setSelectedGame] = useState<GameEntry | null>(null);
-  const { snapshot, stopRecording } = useRecorder();
+  const [exited, setExited] = useState(false);
+  const { snapshot, stopRecording, stopFinal } = useRecorder();
 
   useEffect(() => {
+    log("HomePage: fetching config from", CONFIG_URL);
     fetch(CONFIG_URL)
       .then((res) => res.json())
-      .then((data: BuildsConfig) => setConfig(data))
-      .catch(() => {});
+      .then((data: BuildsConfig) => {
+        log("HomePage: config loaded, games:",
+          data.games?.length);
+        setConfig(data);
+      })
+      .catch((err) => {
+        log("HomePage: config fetch error", err);
+      });
+  }, []);
+
+  useEffect(() => {
+    const onVis = () =>
+      log("visibilitychange:",
+        document.visibilityState);
+    const onHide = () => log("pagehide fired");
+    document.addEventListener(
+      "visibilitychange", onVis,
+    );
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      document.removeEventListener(
+        "visibilitychange", onVis,
+      );
+      window.removeEventListener(
+        "pagehide", onHide,
+      );
+    };
   }, []);
 
   useEffect(() => {
@@ -53,16 +81,19 @@ export default function HomePage() {
 
   return (
     <main className="grid">
-      {selectedGame ? (
+      {exited ? (
+        <div className="card grid" data-testid="done-message">
+          <h1>Recording uploaded</h1>
+          <p>You may close this tab.</p>
+        </div>
+      ) : selectedGame ? (
         <UnityPlayer
           folder={selectedGame.folder}
           buildPrefix={selectedGame.buildPrefix}
           name={selectedGame.name}
           baseUrl={config.baseUrl}
-          onBack={() => {
-            void stopRecording();
-            setSelectedGame(null);
-          }}
+          stopFinal={stopFinal}
+          onDone={() => setExited(true)}
         />
       ) : (
         <>

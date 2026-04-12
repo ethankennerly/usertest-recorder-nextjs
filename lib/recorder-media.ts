@@ -1,7 +1,9 @@
 import type { AudioWarning } from "./recorder-config";
 import {
-  SILENT_THRESHOLD_DB,
+  AUDIO_BITRATE,
   QUIET_THRESHOLD_DB,
+  SILENT_THRESHOLD_DB,
+  VIDEO_BITRATE,
 } from "./recorder-config";
 import { fixWebmDuration } from "@fix-webm-duration/fix";
 import { isWebm } from "./mime-type";
@@ -75,6 +77,54 @@ export function parseGetUserMediaError(error: unknown): {
   }
 
   return { message, cameraAllowed, microphoneAllowed };
+}
+
+export function isStreamAlive(
+  stream: MediaStream | null,
+): boolean {
+  if (!stream) return false;
+  return stream.getTracks().every(
+    (t) => t.readyState === "live",
+  );
+}
+
+export async function acquireStream(
+  current: MediaStream | null,
+): Promise<MediaStream> {
+  if (isStreamAlive(current)) {
+    log("reusing existing stream");
+    return current!;
+  }
+  current?.getTracks().forEach((t) => t.stop());
+  return navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "user" },
+    audio: true,
+  });
+}
+
+export function createRecorder(
+  stream: MediaStream,
+  mime: string | null,
+): MediaRecorder {
+  const opts: MediaRecorderOptions = {};
+  if (mime) opts.mimeType = mime;
+  if (VIDEO_BITRATE > 0)
+    opts.videoBitsPerSecond = VIDEO_BITRATE;
+  if (AUDIO_BITRATE > 0)
+    opts.audioBitsPerSecond = AUDIO_BITRATE;
+  return new MediaRecorder(stream, opts);
+}
+
+export function setupTrackEndHandlers(
+  stream: MediaStream,
+  onEnd: () => void,
+): void {
+  stream.getTracks().forEach((t) => {
+    t.onended = () => {
+      log("track ended:", t.kind);
+      onEnd();
+    };
+  });
 }
 
 export async function buildFinalBlob(

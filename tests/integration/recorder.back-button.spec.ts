@@ -65,14 +65,8 @@ test(
 
     await page.locator("[data-testid='back-button']").click();
 
-    await page.waitForSelector("[data-testid='game-button']", {
-      timeout: 5_000,
-    });
-
-    await page.waitForFunction(
-      () =>
-        (window.__recorderTest?.uploadCount ?? 0) > 0,
-      null,
+    await page.waitForSelector(
+      "[data-testid='done-message']",
       { timeout: 10_000 },
     );
 

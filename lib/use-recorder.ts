@@ -4,16 +4,17 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { getPreferredMimeType } from "./mime-type";
 import {
   type RecorderSnapshot,
-  AUDIO_BITRATE,
   MAX_RECORDING_BYTES,
   MAX_RECORDING_MS,
-  VIDEO_BITRATE,
   initialSnapshot,
 } from "./recorder-config";
 import { log } from "./recorder-log";
 import {
+  acquireStream,
   checkMediaAvailability,
+  createRecorder,
   parseGetUserMediaError,
+  setupTrackEndHandlers,
 } from "./recorder-media";
 import { processStopAndUpload } from "./recorder-upload";
 import { useAudioMonitor } from "./use-audio-monitor";
@@ -41,6 +42,7 @@ export function useRecorder() {
     useRef<ReturnType<typeof setTimeout> | null>(null);
   const blobRef = useRef<Blob | null>(null);
   const mountedRef = useRef(true);
+  const finalRef = useRef(false);
   const startRef = useRef<() => Promise<void>>(
     async () => {},
   );
@@ -109,10 +111,11 @@ export function useRecorder() {
             }
           : {}),
       }));
-      stream.getTracks().forEach((t) => t.stop());
-      if (mountedRef.current) {
+      if (mountedRef.current && !finalRef.current) {
         log("page still open, restarting");
         void startRef.current();
+      } else {
+        stream.getTracks().forEach((t) => t.stop());
       }
     } catch (error: unknown) {
       update((c) => ({
@@ -145,7 +148,6 @@ export function useRecorder() {
         prev.ondataavailable = null;
         prev.stop();
       }
-      streamRef.current?.getTracks().forEach((t) => t.stop());
       chunksRef.current = [];
       update((c) => ({
         ...c,
@@ -153,10 +155,9 @@ export function useRecorder() {
         error: null,
       }));
 
-      const stream =
-        await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" }, audio: true,
-        });
+      const stream = await acquireStream(
+        streamRef.current,
+      );
       if (gen !== genRef.current) {
         stream.getTracks().forEach((t) => t.stop());
         return;
@@ -166,20 +167,11 @@ export function useRecorder() {
         cameraAllowed: stream.getVideoTracks().length > 0,
         microphoneAllowed: stream.getAudioTracks().length > 0,
       }));
-      stream.getTracks().forEach((t) => {
-        t.onended = () => {
-          log("track ended:", t.kind);
-          void stop();
-        };
-      });
+      setupTrackEndHandlers(
+        stream, () => void stop(),
+      );
 
-      const opts: MediaRecorderOptions = {};
-      if (mime) opts.mimeType = mime;
-      if (VIDEO_BITRATE > 0)
-        opts.videoBitsPerSecond = VIDEO_BITRATE;
-      if (AUDIO_BITRATE > 0)
-        opts.audioBitsPerSecond = AUDIO_BITRATE;
-      const rec = new MediaRecorder(stream, opts);
+      const rec = createRecorder(stream, mime);
       streamRef.current = stream;
       recRef.current = rec;
       stopReqRef.current = false;
@@ -256,9 +248,16 @@ export function useRecorder() {
     snapshot,
   );
 
+  const stopFinal = useCallback(async () => {
+    finalRef.current = true;
+    log("stopFinal: terminal stop");
+    await stop();
+  }, [stop]);
+
   return {
     snapshot,
     stopRecording: stop,
+    stopFinal,
     startRecording: start,
   };
 }
