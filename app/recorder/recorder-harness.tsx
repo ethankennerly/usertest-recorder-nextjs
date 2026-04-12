@@ -68,6 +68,14 @@ export function RecorderHarness() {
         <div className="status-pill" data-testid="recorder-state">
           Recorder state: {snapshot.state}
         </div>
+        {snapshot.cameraAllowed === false ? (
+          <p data-testid="camera-permission">Camera is NOT recording.</p>
+        ) : null}
+        {snapshot.microphoneAllowed === false ? (
+          <p data-testid="microphone-permission">
+            Microphone is NOT recording.
+          </p>
+        ) : null}
         <p>
           The recorder starts on page load and stops when the test triggers the
           Unity quit bridge.

@@ -14,10 +14,10 @@
 
 ## Clarify Permissions
 
-- [ ] Bottom of screen already has a status message
-- [ ] If user did not give permission, show each permission not given:
-    - [ ] "Camera is NOT recording."
-    - [ ] "Microphone is NOT recording."
+- [x] Bottom of screen already has a status message
+- [x] If user did not give permission, show each permission not given:
+    - [x] "Camera is NOT recording."
+    - [x] "Microphone is NOT recording."
 
 ## Reduce Recording Overhead
 

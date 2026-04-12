@@ -26,6 +26,8 @@ export type RecorderSnapshot = {
   audioWarning: AudioWarning;
   meterVisible: boolean;
   posthogSessionId: string | null;
+  cameraAllowed: boolean | null;
+  microphoneAllowed: boolean | null;
 };
 
 const TEST_MODE = process.env.NEXT_PUBLIC_RECORDER_TEST_MODE === "true";
@@ -63,6 +65,19 @@ const METER_SHOW_AFTER_QUIET_S = Number(
 export const METER_MIN_DB = -60;
 export const METER_MAX_DB = 0;
 export const QUIET_THRESHOLD = QUIET_THRESHOLD_DB;
+const MAX_RECORDING_BYTES = Number(
+  process.env.NEXT_PUBLIC_RECORDER_MAX_BYTES ??
+    String(20 * 1024 * 1024),
+);
+const MAX_RECORDING_MS = Number(
+  process.env.NEXT_PUBLIC_RECORDER_MAX_DURATION_MS ?? "20000",
+);
+const VIDEO_BITRATE = Number(
+  process.env.NEXT_PUBLIC_RECORDER_VIDEO_BITS ?? "600000",
+);
+const AUDIO_BITRATE = Number(
+  process.env.NEXT_PUBLIC_RECORDER_AUDIO_BITS ?? "96000",
+);
 
 export const initialSnapshot: RecorderSnapshot = {
   state: "idle",
@@ -80,6 +95,8 @@ export const initialSnapshot: RecorderSnapshot = {
   audioWarning: null,
   meterVisible: false,
   posthogSessionId: null,
+  cameraAllowed: null,
+  microphoneAllowed: null,
 };
 
 
@@ -95,6 +112,9 @@ export function useRecorder() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const audioPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finalBlobRef = useRef<Blob | null>(null);
+  const mountedRef = useRef(true);
 
   const preferredMimeType = useMemo(() => {
     const mime = getPreferredMimeType();
@@ -106,6 +126,7 @@ export function useRecorder() {
 
   const updateSnapshot = useCallback(
     (updater: (current: RecorderSnapshot) => RecorderSnapshot) => {
+      if (!mountedRef.current) return;
       setSnapshot((current) => updater(current));
     },
     []
@@ -122,6 +143,24 @@ export function useRecorder() {
     }
     analyserRef.current = null;
   }, []);
+
+  const clearRecordingTimeout = useCallback(() => {
+    if (recordingTimeoutRef.current !== null) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
+  }, []);
+
+  const setPermissionFlags = useCallback(
+    (cameraAllowed: boolean | null, microphoneAllowed: boolean | null) => {
+      updateSnapshot((current) => ({
+        ...current,
+        cameraAllowed,
+        microphoneAllowed,
+      }));
+    },
+    [updateSnapshot],
+  );
 
   const startAudioMonitor = useCallback(
     (stream: MediaStream) => {
@@ -248,6 +287,11 @@ export function useRecorder() {
           "uploadBlob: failed, status:",
           response.status,
         );
+        if (response.status === 413) {
+          throw new Error(
+            "Upload failed: recording exceeds server size limit.",
+          );
+        }
         throw new Error(
           `Upload failed with status ${response.status}`,
         );
@@ -287,6 +331,7 @@ export function useRecorder() {
 
     log("stopRecording: requested");
     stopRequestedRef.current = true;
+    clearRecordingTimeout();
     updateSnapshot((current) => ({
       ...current,
       stopCount: current.stopCount + 1,
@@ -296,7 +341,7 @@ export function useRecorder() {
     if (recorder && recorder.state !== "inactive") {
       recorder.stop();
     }
-  }, [updateSnapshot]);
+  }, [updateSnapshot, clearRecordingTimeout]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -364,9 +409,22 @@ export function useRecorder() {
         return;
       }
 
-      const recorder = preferredMimeType
-        ? new MediaRecorder(stream, { mimeType: preferredMimeType })
-        : new MediaRecorder(stream);
+      const hasVideo = stream.getVideoTracks().length > 0;
+      const hasAudio = stream.getAudioTracks().length > 0;
+      setPermissionFlags(hasVideo, hasAudio);
+
+      const mediaRecorderOptions: MediaRecorderOptions = {};
+      if (preferredMimeType) {
+        mediaRecorderOptions.mimeType = preferredMimeType;
+      }
+      if (VIDEO_BITRATE > 0) {
+        mediaRecorderOptions.videoBitsPerSecond = VIDEO_BITRATE;
+      }
+      if (AUDIO_BITRATE > 0) {
+        mediaRecorderOptions.audioBitsPerSecond = AUDIO_BITRATE;
+      }
+
+      const recorder = new MediaRecorder(stream, mediaRecorderOptions);
       log(
         "MediaRecorder created, mimeType:",
         recorder.mimeType,
@@ -377,6 +435,11 @@ export function useRecorder() {
       mediaStreamRef.current = stream;
       mediaRecorderRef.current = recorder;
       stopRequestedRef.current = false;
+
+      recordingTimeoutRef.current = setTimeout(() => {
+        log("max recording duration reached, stopping");
+        void stopRecording();
+      }, MAX_RECORDING_MS);
 
       startAudioMonitor(stream);
 
@@ -393,11 +456,21 @@ export function useRecorder() {
           chunksRef.current.push(event.data);
         }
 
-        updateSnapshot((current) => ({
-          ...current,
-          state: recorder.state,
-          bytes: current.bytes + event.data.size,
-        }));
+        updateSnapshot((current) => {
+          const bytes = current.bytes + event.data.size;
+          if (
+            bytes >= MAX_RECORDING_BYTES &&
+            recorder.state !== "inactive"
+          ) {
+            log("max recording size reached, stopping");
+            void stopRecording();
+          }
+          return {
+            ...current,
+            state: recorder.state,
+            bytes,
+          };
+        });
       };
 
       recorder.onerror = () => {
@@ -433,6 +506,8 @@ export function useRecorder() {
               })
             : rawBlob;
 
+          finalBlobRef.current = blob;
+          clearRecordingTimeout();
           updateSnapshot((current) => ({
             ...current,
             state: recorder.state,
@@ -468,13 +543,32 @@ export function useRecorder() {
         state: recorder.state,
       }));
     } catch (error: unknown) {
+      let cameraAllowed: boolean | null = null;
+      let microphoneAllowed: boolean | null = null;
+      let message =
+        error instanceof Error
+          ? error.message
+          : "Failed to start recorder.";
+
+      if (error instanceof DOMException) {
+        if (error.name === "NotAllowedError") {
+          cameraAllowed = false;
+          microphoneAllowed = false;
+          message =
+            "Camera or microphone permission denied. Allow both to record.";
+        }
+        if (error.name === "NotFoundError") {
+          cameraAllowed = false;
+          microphoneAllowed = false;
+          message = "No camera or microphone devices found.";
+        }
+      }
+
+      setPermissionFlags(cameraAllowed, microphoneAllowed);
       updateSnapshot((current) => ({
         ...current,
         state: "error",
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to start recorder.",
+        error: message,
       }));
     }
   }, [
@@ -486,15 +580,43 @@ export function useRecorder() {
   ]);
 
   useEffect(() => {
+    mountedRef.current = true;
     log("useEffect mount");
     void startRecording();
 
     return () => {
+      mountedRef.current = false;
       log("useEffect cleanup");
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
+        mediaRecorderRef.current.stop();
+      }
+      clearRecordingTimeout();
       stopAudioMonitor();
       mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, [startRecording, stopAudioMonitor]);
+  }, [startRecording, stopAudioMonitor, clearRecordingTimeout]);
+
+  useEffect(() => {
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
+        log("beforeunload: stopping recording");
+        void stopRecording();
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [stopRecording]);
 
   useEffect(() => {
     if (!TEST_MODE) {
