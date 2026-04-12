@@ -31,6 +31,14 @@ Always proceed in strict order:
 - Always limit file <256 lines
 - Always write Unix line endings (LF, not CRLF)
 
+## Tech Spec Style
+
+- Always apply code style rules to tech spec files
+- Each line is a checklist item or a heading
+- Checklist item is observable by a test or a user
+- Blank line after heading
+- Last line is blank
+
 ## Tools
 
 - Always use MCP server and browser to verify integration

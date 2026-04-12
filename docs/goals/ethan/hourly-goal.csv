@@ -15,5 +15,6 @@ Due Time,Goal,Distraction
 2026-04-12 08:00,Audit empty mobile recording,Resolve config and vercel env warnings
 2026-04-12 09:00,Observe mobile recording with MIME type,
 2026-04-12 10:00,Observe verbose steps of mobile recording with MIME type,
-2026-04-12 11:00,Observe two starts on laptop/mobile recording/session replay,Report bug: Record from Vercel
-2026-04-12 12:00,Observe verbose log of Vercel failure
+2026-04-12 11:00,Observe two starts on laptop/mobile recording/session replay,Bug: Record from Vercel
+2026-04-12 12:00,Observe verbose log of Vercel failure,
+2026-04-12 13:00,Record small video,
