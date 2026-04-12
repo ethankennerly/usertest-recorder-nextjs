@@ -25,7 +25,11 @@ test("uploads the recorder blob to S3 and keeps it private", async ({ page }) =>
     await window.__simulateUnityQuit?.();
   });
 
-  await page.waitForFunction(() => window.__recorderTest?.state === "inactive");
+  await page.waitForFunction(
+    () => (window.__recorderTest?.uploadCount ?? 0) > 0,
+    null,
+    { timeout: 10_000 }
+  );
   await expect
     .poll(async () => page.evaluate(() => window.__recorderTest?.uploadTarget))
     .toBe("s3");

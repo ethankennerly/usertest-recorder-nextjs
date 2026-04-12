@@ -46,15 +46,21 @@
 - Cleanup called rec.stop() (async onstop queued)
 - Effect body called start() clearing chunksRef
 - Stale onstop read empty chunksRef
+- S3 bucket missing CORS for PUT from Vercel origin
+- Browser blocks presigned PUT preflight
+- No Access-Control-Allow-Origin header on bucket
 
 ## Action Items
 
 - [x] Analyze logs
 - [x] Research pro solutions
 - [x] Add additional logs to narrow down issue
-- [ ] Add AWS env vars to Vercel project settings
+- [x] Add AWS env vars to Vercel project settings
 - [x] Guard stale onstop with gen check
 - [x] Nullify handlers in lifecycle cleanup
 - [x] Log chunk count in buildFinalBlob
 - [x] Add try-catch to presigned-upload route
+- [x] Add CORS to S3 setup script
+- [x] Add upload network error log
+- [ ] Run setup-s3-bucket to apply CORS
 - [x] Verify pre-push passes

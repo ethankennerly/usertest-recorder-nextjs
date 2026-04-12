@@ -1,10 +1,15 @@
 import {
   CreateBucketCommand,
   HeadBucketCommand,
+  PutBucketCorsCommand,
   PutBucketOwnershipControlsCommand,
   PutPublicAccessBlockCommand,
   S3Client
 } from "@aws-sdk/client-s3";
+import pkg from "@next/env";
+const { loadEnvConfig } = pkg;
+
+loadEnvConfig(process.cwd());
 
 const region = process.env.AWS_REGION || "us-east-1";
 const bucket =
@@ -54,6 +59,22 @@ await client.send(
       IgnorePublicAcls: true,
       BlockPublicPolicy: true,
       RestrictPublicBuckets: true
+    }
+  })
+);
+
+await client.send(
+  new PutBucketCorsCommand({
+    Bucket: bucket,
+    CORSConfiguration: {
+      CORSRules: [
+        {
+          AllowedOrigins: ["*"],
+          AllowedMethods: ["PUT"],
+          AllowedHeaders: ["*"],
+          MaxAgeSeconds: 3600
+        }
+      ]
     }
   })
 );

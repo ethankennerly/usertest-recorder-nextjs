@@ -50,7 +50,14 @@ React to any event that might end a game session:
 ## Upload
 
 - [x] Upload the recording to S3 directly
-- [x] If the browser page is still open, start a new recording
+
+### After Upload Success
+
+- [ ] If the upload is in progress, wait
+- [ ] If the upload failed, then do nothing
+- [ ] If the total duration of all recordings sums to 15 minutes or longer, do nothing
+- [x] If the browser page is closed, then do nothing
+- [x] If none of the above conditions, then start a new recording
 
 ## Edge Cases
 

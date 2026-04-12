@@ -65,7 +65,7 @@ test("record → upload to S3 → download → verify playable WebM", async ({ p
   });
 
   await page.waitForFunction(
-    () => window.__recorderTest?.state === "inactive",
+    () => (window.__recorderTest?.uploadCount ?? 0) > 0,
     null,
     { timeout: 10_000 }
   );

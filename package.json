@@ -21,7 +21,7 @@
     "vercel:build": "vercel build --yes",
     "vercel:deploy": "vercel deploy --prebuilt --yes",
     "validate:build": "node scripts/validate-build.mjs",
-    "ci:check": "npm run --silent lint && npm test --silent -- --reporter=line && npm run --silent typegen && npm run --silent typecheck && npm run --silent build && npm run --silent validate:build"
+    "ci:check": "npm run --silent lint && npm test --silent -- --reporter=line && npm run --silent typegen && npm run --silent typecheck && npm run --silent build && npm run --silent validate:build && npm run test:s3"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.902.0",

@@ -1,6 +1,6 @@
 # Recorder integration checklist
 
-## 1. Bootstrap the new Next.js 16 repo
+## Bootstrap the new Next.js 16 repo
 
 - [x] Create `package.json` with `dev`, `build`, `lint`, `test`, and `ci:check` scripts.
 - [x] Add Next.js 16, React, and React DOM runtime dependencies.
@@ -14,7 +14,7 @@
 - [x] Create `app/layout.tsx` and a home page for the new repo.
 - [x] Create the Next.js 16 recorder route at `app/recorder/page.tsx`.
 
-## 2. Build the deterministic local recorder test harness
+## Build the deterministic local recorder test harness
 
 - [x] Add a Playwright config with fake media flags and permissions.
 - [x] Launch Chromium with `--use-fake-ui-for-media-stream`.
@@ -42,7 +42,7 @@
 - [x] Mock the upload endpoint and assert one upload request is sent.
 - [x] Assert the upload request uses the expected method and MIME type.
 
-## 3. Add the real S3 upload path
+## Add the real S3 upload path
 
 - [x] Upload the recording blob directly to S3; do not proxy through the Next.js server.
 - [x] Upload the recording blob to S3 in the recorder route's stop logic.
@@ -58,7 +58,7 @@
 - [ ] Record. Download. Play. Verify: audio is starting and stopping sounds.
 - [ ] Open browser. Record. Download. Play. Verify: camera video and audio replays.
 
-### 3a. Diagnosed: React Strict Mode double-mount + async getUserMedia race
+### Diagnosed: React Strict Mode double-mount + async getUserMedia race
 
 Root cause: `useEffect` calls `startRecording()` which awaits `getUserMedia` (200-500ms on real hardware). React Strict Mode unmounts and remounts, calling `startRecording` again while the first `getUserMedia` is still in-flight. Both resolve and create two MediaRecorders sharing `chunksRef`, producing a single file with two concatenated EBML WebM headers. Players read only the first tiny fragment (the ghost mount's ~34KB recording).
 
@@ -67,8 +67,14 @@ Root cause: `useEffect` calls `startRecording()` which awaits `getUserMedia` (20
 - [x] Test: `recorder.playback.spec.ts` checks duration > 0, frame count > 1, codecs present, AND exactly 1 EBML header.
 - [x] Verbose diagnostics: set `NEXT_PUBLIC_RECORDER_VERBOSE=true` to log recorder lifecycle (mount, getUserMedia, generation checks, start, stop, chunks) to the browser console.
 
+## Setup CORS
 
-## 4. Add local and hosted automation
+- [x] `npm run s3:setup` should set CORS for upload
+- [x] `env.AWS_S3_BUCKET` configured the bucket name
+- [ ] Setup S3 should use the configured bucket
+- [ ] Setup S3 should not create a new bucket
+
+## Add local and hosted automation
 
 - [ ] VS Code IDE Start Debugging and Run Without Debugging launch the dev server.
 - [x] Add a GitHub Actions workflow to run `npm run --silent ci:check`.
@@ -82,7 +88,7 @@ Root cause: `useEffect` calls `startRecording()` which awaits `getUserMedia` (20
 - [x] Build the linked project locally with `vercel build`.
 - [x] Create a ready Vercel preview deployment that includes the home page and recorder route.
 
-## 5. Remaining external verification
+## Remaining external verification
 
 - [ ] Verify the GitHub-hosted CI job passes after a real git push.
 - [ ] The linked Vercel project dedicated private S3 bucket

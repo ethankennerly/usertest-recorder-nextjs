@@ -75,11 +75,20 @@ export async function uploadBlob(
     log("uploadBlob: server proxy", UPLOAD_PATH);
   }
 
-  const response = await fetch(uploadUrl, {
-    method: "PUT",
-    headers,
-    body: blob,
-  });
+  let response: Response;
+  try {
+    response = await fetch(uploadUrl, {
+      method: "PUT",
+      headers,
+      body: blob,
+    });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (_err) {
+    log("uploadBlob: network error (likely CORS)");
+    throw new Error(
+      "Upload network error (check S3 CORS).",
+    );
+  }
 
   if (!response.ok) {
     log("uploadBlob: failed, status:", response.status);
