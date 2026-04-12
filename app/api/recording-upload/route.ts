@@ -19,12 +19,13 @@ function getS3Client() {
   });
 }
 
-export function getObjectKey() {
+export function getObjectKey(contentType = "video/webm") {
   const prefix = process.env.AWS_S3_RECORDINGS_PREFIX || "recordings";
   const now = new Date();
   const date = now.toISOString().slice(0, 10);
   const time = now.toISOString().slice(11, 19).replace(/:/g, "");
-  return `${prefix}/${date}/${date}T${time}_${randomUUID()}.webm`;
+  const ext = contentType.startsWith("video/mp4") ? "mp4" : "webm";
+  return `${prefix}/${date}/${date}T${time}_${randomUUID()}.${ext}`;
 }
 
 export async function PUT(request: Request) {
@@ -33,14 +34,14 @@ export async function PUT(request: Request) {
   if (!bucket || bucket.includes("replace-me") || bucket.includes("placeholder")) {
     const payload = await request.arrayBuffer();
     const posthogSessionId = request.headers.get("x-posthog-session-id") ?? null;
+    const ct = request.headers.get("content-type") ?? "application/octet-stream";
 
     return NextResponse.json({
       ok: true,
-      key: getObjectKey(),
+      key: getObjectKey(ct),
       target: "mock",
       size: payload.byteLength,
-      contentType:
-        request.headers.get("content-type") ?? "application/octet-stream",
+      contentType: ct,
       posthogSessionId,
     });
   }
@@ -48,7 +49,7 @@ export async function PUT(request: Request) {
   const client = getS3Client();
   const contentType = request.headers.get("content-type") || "video/webm";
   const posthogSessionId = request.headers.get("x-posthog-session-id");
-  const key = getObjectKey();
+  const key = getObjectKey(contentType);
   const body = Buffer.from(await request.arrayBuffer());
 
   if (body.byteLength === 0) {
@@ -58,19 +59,24 @@ export async function PUT(request: Request) {
     );
   }
 
-  // Validate EBML magic bytes: a valid WebM file starts with 0x1A45DFA3.
-  // A truncated upload (e.g. tab closed mid-fetch) may deliver non-zero but
-  // corrupted bytes that would otherwise be stored to S3.
   const EBML_MAGIC = [0x1a, 0x45, 0xdf, 0xa3];
-  if (
-    body.byteLength < EBML_MAGIC.length ||
-    body[0] !== EBML_MAGIC[0] ||
-    body[1] !== EBML_MAGIC[1] ||
-    body[2] !== EBML_MAGIC[2] ||
-    body[3] !== EBML_MAGIC[3]
-  ) {
+  const isEbml =
+    body.byteLength >= 4 &&
+    body[0] === EBML_MAGIC[0] &&
+    body[1] === EBML_MAGIC[1] &&
+    body[2] === EBML_MAGIC[2] &&
+    body[3] === EBML_MAGIC[3];
+
+  const isFtyp =
+    body.byteLength >= 8 &&
+    body[4] === 0x66 &&
+    body[5] === 0x74 &&
+    body[6] === 0x79 &&
+    body[7] === 0x70;
+
+  if (!isEbml && !isFtyp) {
     return NextResponse.json(
-      { ok: false, error: "Invalid WebM: missing EBML header." },
+      { ok: false, error: "Invalid recording: not WebM or MP4." },
       { status: 400 }
     );
   }

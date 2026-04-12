@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { getObjectKey } from "../../app/api/recording-upload/route";
 
 const EBML_HEADER = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
+const FTYP_MAGIC = Buffer.from([0x66, 0x74, 0x79, 0x70]);
 
 test("recorder upload body is valid WebM payload", async ({ page }) => {
   let uploadData: Buffer | null = null;
@@ -33,11 +34,14 @@ test("recorder upload body is valid WebM payload", async ({ page }) => {
   await page.waitForFunction(() => window.__recorderTest?.state === "inactive");
 
   expect(uploadData, "Expected the recorder to send a binary upload payload").not.toBeNull();
-  expect(uploadContentType, "Expected the browser upload request to declare video content type").toContain("video/webm");
+  expect(uploadContentType, "Expected the browser upload request to declare video content type").toMatch(/^video\/(webm|mp4)/);
 
   const header = uploadData!.slice(0, 4);
+  const ftypSlice = uploadData!.slice(4, 8);
+  const isEbml = header.equals(EBML_HEADER);
+  const isFtyp = ftypSlice.equals(FTYP_MAGIC);
   expect(
-    header,
+    isEbml || isFtyp,
     [
       "Repro steps:",
       "1. Start the dev recorder page.",
@@ -46,12 +50,7 @@ test("recorder upload body is valid WebM payload", async ({ page }) => {
       "",
       `Observed content-type=${uploadContentType}`,
       `Observed header=${header.toString("hex")}`,
-      "Expected the uploaded payload to begin with the WebM EBML header.",
-      "",
-      "Isolated cause within 10 lines of code:",
-      "uploadBlob(blob) -> fetch(UPLOAD_PATH, { body: blob })",
-      "app/api/recording-upload/route.ts -> request.arrayBuffer()",
-      "Buffer.from(await request.arrayBuffer())"
+      "Expected WebM EBML header (1a45dfa3) or MP4 ftyp at bytes 4-7.",
     ].join("\n")
-  ).toEqual(EBML_HEADER);
+  ).toBe(true);
 });

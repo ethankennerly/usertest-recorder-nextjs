@@ -4,6 +4,8 @@ import { fixWebmDuration } from "@fix-webm-duration/fix";
 import posthog from "posthog-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { getPreferredMimeType, isWebm } from "./mime-type";
+
 export type RecorderUiState = RecordingState | "idle" | "requesting" | "error";
 
 export type AudioWarning = "silent" | "quiet" | null;
@@ -32,8 +34,19 @@ const UPLOAD_PATH =
 const VERBOSE = process.env.NEXT_PUBLIC_RECORDER_VERBOSE === "true";
 
 function log(...args: unknown[]) {
-  if (VERBOSE) {
-    console.log("[recorder]", ...args);
+  if (!VERBOSE) return;
+  const message = ["[recorder]", ...args]
+    .map((a) => (typeof a === "string" ? a : String(a)))
+    .join(" ");
+  console.log(message);
+  if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+    navigator.sendBeacon(
+      "/api/recorder-log",
+      new Blob(
+        [JSON.stringify({ message })],
+        { type: "application/json" },
+      ),
+    );
   }
 }
 
@@ -69,21 +82,7 @@ export const initialSnapshot: RecorderSnapshot = {
   posthogSessionId: null,
 };
 
-function getPreferredMimeType() {
-  if (typeof window === "undefined" || typeof MediaRecorder === "undefined") {
-    return "";
-  }
 
-  const mimeTypes = [
-    "video/webm;codecs=vp9,opus",
-    "video/webm;codecs=vp8,opus",
-    "video/webm",
-  ];
-
-  return (
-    mimeTypes.find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) ?? ""
-  );
-}
 
 export function useRecorder() {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
@@ -97,7 +96,13 @@ export function useRecorder() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const audioPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const preferredMimeType = useMemo(() => getPreferredMimeType(), []);
+  const preferredMimeType = useMemo(() => {
+    const mime = getPreferredMimeType();
+    if (typeof window !== "undefined") {
+      log("preferredMimeType:", mime || "(browser default)");
+    }
+    return mime;
+  }, []);
 
   const updateSnapshot = useCallback(
     (updater: (current: RecorderSnapshot) => RecorderSnapshot) => {
@@ -183,6 +188,7 @@ export function useRecorder() {
 
   const uploadBlob = useCallback(
     async (blob: Blob) => {
+      log("uploadBlob: start, size:", blob.size, "type:", blob.type);
       const contentType = blob.type || "video/webm";
       const posthogSessionId = posthog.get_session_id() ?? null;
       const headers: Record<string, string> = { "Content-Type": contentType };
@@ -204,6 +210,12 @@ export function useRecorder() {
         target?: string;
       };
 
+      log(
+        "uploadBlob: complete, key:",
+        payload.key,
+        "target:",
+        payload.target,
+      );
       if (payload.key) {
         posthog.capture("camera_recording_uploaded", { s3_key: payload.key });
       }
@@ -223,9 +235,11 @@ export function useRecorder() {
 
   const stopRecording = useCallback(async () => {
     if (stopRequestedRef.current) {
+      log("stopRecording: already requested, skipping");
       return;
     }
 
+    log("stopRecording: requested");
     stopRequestedRef.current = true;
     updateSnapshot((current) => ({
       ...current,
@@ -307,6 +321,12 @@ export function useRecorder() {
       const recorder = preferredMimeType
         ? new MediaRecorder(stream, { mimeType: preferredMimeType })
         : new MediaRecorder(stream);
+      log(
+        "MediaRecorder created, mimeType:",
+        recorder.mimeType,
+        "tracks:",
+        stream.getTracks().map((t) => t.kind).join(","),
+      );
 
       mediaStreamRef.current = stream;
       mediaRecorderRef.current = recorder;
@@ -315,6 +335,7 @@ export function useRecorder() {
       startAudioMonitor(stream);
 
       recorder.onstart = () => {
+        log("onstart: state:", recorder.state);
         updateSnapshot((current) => ({
           ...current,
           state: recorder.state,
@@ -334,6 +355,7 @@ export function useRecorder() {
       };
 
       recorder.onerror = () => {
+        log("onerror: MediaRecorder error");
         updateSnapshot((current) => ({
           ...current,
           state: "error",
@@ -345,8 +367,10 @@ export function useRecorder() {
         log("recorder stopped, chunks:", chunksRef.current.length);
         stopAudioMonitor();
         void (async () => {
+          const blobType =
+            recorder.mimeType || preferredMimeType || "video/webm";
           const rawBlob = new Blob(chunksRef.current, {
-            type: recorder.mimeType || preferredMimeType || "video/webm",
+            type: blobType,
           });
 
           const duration = Date.now() - recordingStartTimeRef.current;
@@ -357,9 +381,11 @@ export function useRecorder() {
             duration,
             "ms",
           );
-          const blob = await fixWebmDuration(rawBlob, duration, {
-            logger: false,
-          });
+          const blob = isWebm(blobType)
+            ? await fixWebmDuration(rawBlob, duration, {
+                logger: false,
+              })
+            : rawBlob;
 
           updateSnapshot((current) => ({
             ...current,
@@ -369,7 +395,10 @@ export function useRecorder() {
           }));
 
           if (blob.size > 0) {
+            log("onstop: uploading blob, size:", blob.size);
             await uploadBlob(blob);
+          } else {
+            log("onstop: blob empty, skipping upload");
           }
 
           stream.getTracks().forEach((track) => track.stop());
