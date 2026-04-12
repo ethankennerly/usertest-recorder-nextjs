@@ -59,7 +59,10 @@ export default function HomePage() {
           buildPrefix={selectedGame.buildPrefix}
           name={selectedGame.name}
           baseUrl={config.baseUrl}
-          onBack={() => setSelectedGame(null)}
+          onBack={() => {
+            void stopRecording();
+            setSelectedGame(null);
+          }}
         />
       ) : (
         <>
