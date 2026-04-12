@@ -16,6 +16,7 @@
     "playwright:install": "playwright install chromium",
     "s3:setup": "node scripts/setup-s3-bucket.mjs",
     "s3:verify-privacy": "node scripts/verify-s3-privacy.mjs",
+    "s3:sync": "npx playwright test --config=playwright.s3.config.ts recorder-sync.s3.spec.ts",
     "vercel:pull": "vercel pull --yes --environment=preview",
     "vercel:build": "vercel build --yes",
     "vercel:deploy": "vercel deploy --prebuilt --yes",

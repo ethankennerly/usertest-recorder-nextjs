@@ -10,7 +10,10 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 import { expect, test } from "@playwright/test";
-import { getObjectKey } from "../../app/api/recording-upload/route";
+import {
+  getObjectKey,
+  mockPresignedUpload,
+} from "../helpers/mock-upload";
 
 const execFileAsync = promisify(execFile);
 
@@ -33,6 +36,8 @@ function countEbmlHeaders(data: Buffer): number {
 
 test("real browser recording produces a playable WebM", async ({ page }) => {
   let uploadData: Buffer | null = null;
+
+  await mockPresignedUpload(page);
 
   await page.route("**/api/recording-upload", async (route) => {
     const request = route.request();

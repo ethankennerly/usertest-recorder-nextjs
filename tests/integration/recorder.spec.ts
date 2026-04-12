@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
-import { getObjectKey } from "../../app/api/recording-upload/route";
+import {
+  getObjectKey,
+  mockPresignedUpload,
+} from "../helpers/mock-upload";
 
 async function openRecorderPage(page: Page) {
   await page.goto("/recorder");
@@ -30,6 +33,8 @@ test("stops recording on Unity quit and uploads once", async ({ page }) => {
     contentType: string | undefined;
     url: string;
   }> = [];
+
+  await mockPresignedUpload(page);
 
   await page.route("**/api/recording-upload", async (route) => {
     const request = route.request();

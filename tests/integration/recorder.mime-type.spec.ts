@@ -88,6 +88,21 @@ test("upload content-type matches recorder mimeType",
   async ({ page }) => {
     let uploadContentType: string | null = null;
 
+    await page.route(
+      "**/api/presigned-upload*",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            url: null,
+            key: "test.webm",
+            target: "mock",
+          }),
+        });
+      },
+    );
+
     await page.route("**/api/recording-upload", async (route) => {
       uploadContentType =
         route.request().headers()["content-type"] ?? null;

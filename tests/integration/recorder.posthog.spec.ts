@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { getObjectKey } from "../../app/api/recording-upload/route";
+import {
+  getObjectKey,
+  mockPresignedUpload,
+} from "../helpers/mock-upload";
 
 async function recordAndUpload(page: import("@playwright/test").Page) {
   await page.goto("/recorder");
@@ -24,6 +27,8 @@ test(
   "upload request includes X-PostHog-Session-Id header",
   async ({ page }) => {
     let sessionIdHeader: string | null = null;
+
+    await mockPresignedUpload(page);
 
     await page.route("**/api/recording-upload", async (route) => {
       sessionIdHeader =
@@ -53,6 +58,8 @@ test(
 );
 
 test("snapshot includes posthogSessionId after upload", async ({ page }) => {
+  await mockPresignedUpload(page);
+
   await page.route("**/api/recording-upload", async (route) => {
     await route.fulfill({
       status: 200,

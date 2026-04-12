@@ -5,6 +5,7 @@
 Always proceed in strict order:
 
 - Always research a pro solution
+- Always cite missing QA steps to reproduce that would isolate the trigger
 - Always discover practical tests
 - Always replace inaccurate tests
 - Always test logic thoroughly

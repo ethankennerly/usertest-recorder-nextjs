@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
-import { getObjectKey } from "../../app/api/recording-upload/route";
+import {
+  getObjectKey,
+  mockPresignedUpload,
+} from "../helpers/mock-upload";
 
 /** Mock Unity loader that defines window.createUnityInstance so
  *  react-unity-webgl initializes without console.error warnings. */
@@ -111,6 +114,8 @@ test("clicking a game button triggers Unity WebGL load", async ({ page }) => {
 
 test("Unity quit stops recording and triggers upload", async ({ page }) => {
   const uploads: string[] = [];
+
+  await mockPresignedUpload(page);
 
   await page.route("**/api/recording-upload", async (route) => {
     uploads.push(route.request().url());

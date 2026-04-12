@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { getObjectKey } from "../../app/api/recording-upload/route";
+import {
+  getObjectKey,
+  mockPresignedUpload,
+} from "../helpers/mock-upload";
 
 const EBML_HEADER = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
 
@@ -32,6 +35,8 @@ test("uploaded recording contains exactly one WebM session", async ({ page }) =>
   });
 
   let uploadData: Buffer | null = null;
+
+  await mockPresignedUpload(page);
 
   await page.route("**/api/recording-upload", async (route) => {
     const request = route.request();

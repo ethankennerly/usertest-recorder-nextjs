@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { getObjectKey } from "../../app/api/recording-upload/route";
+import {
+  getObjectKey,
+  mockPresignedUpload,
+} from "../helpers/mock-upload";
 
 const EBML_HEADER = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
 const FTYP_MAGIC = Buffer.from([0x66, 0x74, 0x79, 0x70]);
@@ -7,6 +10,8 @@ const FTYP_MAGIC = Buffer.from([0x66, 0x74, 0x79, 0x70]);
 test("recorder upload body is valid WebM payload", async ({ page }) => {
   let uploadData: Buffer | null = null;
   let uploadContentType: string | null = null;
+
+  await mockPresignedUpload(page);
 
   await page.route("**/api/recording-upload", async (route) => {
     const request = route.request();

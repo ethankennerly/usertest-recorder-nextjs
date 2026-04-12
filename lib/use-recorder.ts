@@ -188,36 +188,82 @@ export function useRecorder() {
 
   const uploadBlob = useCallback(
     async (blob: Blob) => {
-      log("uploadBlob: start, size:", blob.size, "type:", blob.type);
+      log(
+        "uploadBlob: start, size:",
+        blob.size,
+        "type:",
+        blob.type,
+      );
       const contentType = blob.type || "video/webm";
-      const posthogSessionId = posthog.get_session_id() ?? null;
-      const headers: Record<string, string> = { "Content-Type": contentType };
+      const posthogSessionId =
+        posthog.get_session_id() ?? null;
+      const params = new URLSearchParams({ contentType });
       if (posthogSessionId) {
-        headers["X-PostHog-Session-Id"] = posthogSessionId;
+        params.set("posthogSessionId", posthogSessionId);
       }
-      const response = await fetch(UPLOAD_PATH, {
+
+      const presignRes = await fetch(
+        `/api/presigned-upload?${params}`,
+      );
+      if (!presignRes.ok) {
+        log(
+          "uploadBlob: presign failed, status:",
+          presignRes.status,
+        );
+        throw new Error(
+          `Presigned URL failed: ${presignRes.status}`,
+        );
+      }
+
+      const { url: presignedUrl, key, target } =
+        (await presignRes.json()) as {
+          url: string | null;
+          key: string;
+          target: string;
+        };
+
+      const headers: Record<string, string> = {
+        "Content-Type": contentType,
+      };
+      let uploadUrl: string;
+      if (presignedUrl) {
+        uploadUrl = presignedUrl;
+        log("uploadBlob: direct S3 upload");
+      } else {
+        uploadUrl = UPLOAD_PATH;
+        if (posthogSessionId) {
+          headers["X-PostHog-Session-Id"] = posthogSessionId;
+        }
+        log("uploadBlob: server proxy", UPLOAD_PATH);
+      }
+
+      const response = await fetch(uploadUrl, {
         method: "PUT",
         headers,
         body: blob,
       });
 
       if (!response.ok) {
-        throw new Error(`Upload failed with status ${response.status}`);
+        log(
+          "uploadBlob: failed, status:",
+          response.status,
+        );
+        throw new Error(
+          `Upload failed with status ${response.status}`,
+        );
       }
-
-      const payload = (await response.json()) as {
-        key?: string;
-        target?: string;
-      };
 
       log(
         "uploadBlob: complete, key:",
-        payload.key,
+        key,
         "target:",
-        payload.target,
+        target,
       );
-      if (payload.key) {
-        posthog.capture("camera_recording_uploaded", { s3_key: payload.key });
+      if (key) {
+        posthog.capture(
+          "camera_recording_uploaded",
+          { s3_key: key },
+        );
       }
 
       updateSnapshot((current) => ({
@@ -225,12 +271,12 @@ export function useRecorder() {
         uploadCount: current.uploadCount + 1,
         uploadMethod: "PUT",
         uploadContentType: contentType,
-        uploadTarget: payload.target ?? UPLOAD_PATH,
-        uploadKey: payload.key ?? null,
+        uploadTarget: target ?? UPLOAD_PATH,
+        uploadKey: key ?? null,
         posthogSessionId,
       }));
     },
-    [updateSnapshot]
+    [updateSnapshot],
   );
 
   const stopRecording = useCallback(async () => {

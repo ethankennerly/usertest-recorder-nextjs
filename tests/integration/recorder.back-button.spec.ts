@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { getObjectKey } from "../../app/api/recording-upload/route";
+import {
+  getObjectKey,
+  mockPresignedUpload,
+} from "../helpers/mock-upload";
 
 const MOCK_UNITY_LOADER = `
   window.createUnityInstance = function(canvas, config, onProgress) {
@@ -16,6 +19,8 @@ test(
   "back button stops recording and uploads",
   async ({ page }) => {
     const uploads: string[] = [];
+
+    await mockPresignedUpload(page);
 
     await page.route("**/api/recording-upload", async (route) => {
       uploads.push(route.request().url());

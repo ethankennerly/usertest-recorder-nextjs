@@ -44,8 +44,8 @@
 
 ## 3. Add the real S3 upload path
 
+- [x] Upload the recording blob directly to S3; do not proxy through the Next.js server.
 - [x] Upload the recording blob to S3 in the recorder route's stop logic.
-- [x] Configure a dedicated private S3 bucket for recorder uploads.
 - [x] Verify end-to-end from the local dev server to an S3 upload.
 - [x] Verify the uploaded video is privately available and cannot be publicly downloaded from S3.
 - [x] Open browser. Click: Simulate Unity Quit. Observe S3. Expect recording.
@@ -67,22 +67,6 @@ Root cause: `useEffect` calls `startRecording()` which awaits `getUserMedia` (20
 - [x] Test: `recorder.playback.spec.ts` checks duration > 0, frame count > 1, codecs present, AND exactly 1 EBML header.
 - [x] Verbose diagnostics: set `NEXT_PUBLIC_RECORDER_VERBOSE=true` to log recorder lifecycle (mount, getUserMedia, generation checks, start, stop, chunks) to the browser console.
 
-### 3b. Diagnosed: Silent audio in real-camera recordings
-
-Observed: 8 of 27 S3 recordings have -91 dB mean volume (digital silence). The opus audio stream exists but contains only 8-byte DTX silence packets (vs. ~959-byte packets in audible recordings). Automated tests pass because Chromium's `--use-fake-device-for-media-stream` generates a synthetic beep at ~-21 dB, masking the real issue.
-
-Root cause: Chrome/macOS got into a stale permission state where `getUserMedia({audio:true})` succeeded and returned a live audio track, but the actual microphone data was blocked — delivering only silence. Toggling Chrome's microphone permission from "Allow" to "Ask" and re-granting it resolved the issue. The exact trigger is unknown but appears to be a browser or OS-level permission caching bug.
-
-Diagnosis data from S3 recordings:
-- Fake device recordings: mean_volume ~-21 dB (synthetic beep — always passes)
-- Real mic recordings with permission: mean_volume ~-28 to -48 dB (ambient room noise + speech)
-- Real mic recordings with stale permission: mean_volume -91.0 dB (digital silence, 8-byte opus packets)
-
-- [x] Test: `recorder.playback.spec.ts` now checks `mean_volume > -50 dB` via ffmpeg volumedetect. Catches digital silence while allowing real ambient noise.
-- [x] Test: `recorder-playback.s3.spec.ts` also checks audio level after S3 round-trip.
-- [x] Validated test accuracy: -91 dB file → FAIL, -41 dB file → PASS, -21 dB fake device → PASS.
-- [x] Fix: runtime audio level monitoring using `AudioContext` + `AnalyserNode`. Polls RMS every 500ms. Shows warning when audio is silent (< -60 dB) or too quiet to distinguish speech from noise (< -40 dB).
-- [ ] Fix: add a pre-recording mic permission check. After `getUserMedia` succeeds, sample the audio track for 500ms to verify it is producing non-zero data before starting the MediaRecorder. If silent, show a diagnostic message instead of silently recording mute audio.
 
 ## 4. Add local and hosted automation
 
