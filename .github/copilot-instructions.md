@@ -5,7 +5,7 @@
 ## Research
 
 - Always search for project that professionals agree uses a best practice
-- Always cite the essential code in a pro solution
+- Always cite a link to the essential code in a pro solution
 - Always cite missing QA steps to reproduce that would isolate the trigger
 
 ## Observability Driven Development (ODD) Steps
@@ -43,6 +43,11 @@
 - Never write logic in React components
 - Always minimize React components to data visualization and input binding
 - Never code branches or methods in React components
+
+## Code Review
+
+- After each implementation, always cite three remaining bugs
+- Always prioritize each bug P1, P2, or P3
 
 ## Code Style
 
