@@ -11,6 +11,7 @@ type GameEntry = {
   buildPrefix: string;
   name: string;
   icon?: string;
+  assetSuffix?: string;
 };
 
 type BuildsConfig = {
@@ -92,6 +93,7 @@ export default function HomePage() {
           buildPrefix={selectedGame.buildPrefix}
           name={selectedGame.name}
           baseUrl={config.baseUrl}
+          assetSuffix={selectedGame.assetSuffix}
           stopFinal={stopFinal}
           onDone={() => setExited(true)}
         />
@@ -104,7 +106,7 @@ export default function HomePage() {
           <div className="game-grid">
             {config.games.map((game) => (
               <button
-                key={game.folder}
+                key={`${game.folder}/${game.buildPrefix}`}
                 className="game-card"
                 data-testid="game-button"
                 onClick={() => setSelectedGame(game)}

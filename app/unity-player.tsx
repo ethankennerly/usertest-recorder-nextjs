@@ -10,20 +10,30 @@ type UnityPlayerProps = {
   buildPrefix: string;
   name: string;
   baseUrl: string;
+  assetSuffix?: string;
   stopFinal: () => Promise<void>;
   onDone: () => void;
 };
 
-export function UnityPlayer({ folder, buildPrefix, name, baseUrl, stopFinal, onDone }: UnityPlayerProps) {
+export function UnityPlayer({
+  folder,
+  buildPrefix,
+  name,
+  baseUrl,
+  assetSuffix,
+  stopFinal,
+  onDone,
+}: UnityPlayerProps) {
   const base = `${baseUrl}/${folder}`;
+  const suffix = assetSuffix ?? "";
   const calledQuit = useRef(false);
 
   const { unityProvider, loadingProgression, isLoaded, addEventListener, removeEventListener, unload } =
     useUnityContext({
       loaderUrl: `${base}/${buildPrefix}.loader.js`,
-      dataUrl: `${base}/${buildPrefix}.data`,
-      frameworkUrl: `${base}/${buildPrefix}.framework.js`,
-      codeUrl: `${base}/${buildPrefix}.wasm`,
+      dataUrl: `${base}/${buildPrefix}.data${suffix}`,
+      frameworkUrl: `${base}/${buildPrefix}.framework.js${suffix}`,
+      codeUrl: `${base}/${buildPrefix}.wasm${suffix}`,
       companyName: "UserTest Recorder",
       productName: name,
       productVersion: "1.0",

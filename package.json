@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit",
     "typegen": "next typegen",
     "playwright:install": "playwright install chromium",
+    "unity:upload": "node scripts/upload-unity-brotli.mjs",
     "s3:setup": "node scripts/setup-s3-bucket.mjs",
     "s3:verify-privacy": "node scripts/verify-s3-privacy.mjs",
     "s3:sync": "npx playwright test --config=playwright.s3.config.ts recorder-sync.s3.spec.ts",

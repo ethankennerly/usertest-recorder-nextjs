@@ -14,7 +14,8 @@ type GameEntry = {
   folder: string;
   buildPrefix: string;
   name: string;
-  icon: string;
+  icon?: string;
+  assetSuffix?: string;
 };
 
 type BuildsConfig = {
@@ -76,6 +77,35 @@ test("Unity build loader.js is accessible from S3 with CORS", async ({
   ).toBeGreaterThan(0);
 });
 
+test("Unity brotli files accessible directly from S3", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForLoadState("domcontentloaded");
+
+  const config: BuildsConfig = await page.evaluate(async (url: string) => {
+    const res = await fetch(url);
+    return res.json();
+  }, CONFIG_URL);
+
+  const brGame = config.games.find(
+    (g: GameEntry) => g.assetSuffix === ".br",
+  );
+  if (!brGame) {
+    test.skip(true, "no brotli game in manifest");
+    return;
+  }
+
+  const base = config.baseUrl;
+  const loaderUrl =
+    `${base}/${brGame.folder}/${brGame.buildPrefix}.loader.js`;
+  const response = await page.request.get(loaderUrl);
+
+  expect(response.status()).toBe(200);
+  expect(
+    response.headers()["content-type"],
+  ).toContain("application/javascript");
+  expect((await response.text()).length).toBeGreaterThan(0);
+});
+
 test("all four Unity build files exist and return 200", async ({ page }) => {
   await page.goto("/");
   await page.waitForLoadState("domcontentloaded");
@@ -87,11 +117,12 @@ test("all four Unity build files exist and return 200", async ({ page }) => {
 
   for (const game of config.games) {
     const base = `${config.baseUrl}/${game.folder}`;
+    const suffix = game.assetSuffix ?? "";
     const files = [
       `${game.buildPrefix}.loader.js`,
-      `${game.buildPrefix}.data`,
-      `${game.buildPrefix}.framework.js`,
-      `${game.buildPrefix}.wasm`,
+      `${game.buildPrefix}.data${suffix}`,
+      `${game.buildPrefix}.framework.js${suffix}`,
+      `${game.buildPrefix}.wasm${suffix}`,
     ];
 
     for (const file of files) {

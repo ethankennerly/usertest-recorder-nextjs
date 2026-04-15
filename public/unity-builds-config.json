@@ -6,7 +6,13 @@
     {
       "folder": "user-testing/unity/builds/save-life-uitk",
       "buildPrefix": "save-life-uitk",
-      "name": "Save Life"
+      "name": "Save Life (GZIP)"
+    },
+    {
+      "assetSuffix": ".br",
+      "folder": "user-testing/unity/builds/save-life-uitk",
+      "buildPrefix": "save-life-uitk-brotli",
+      "name": "Save Life (Brotli)"
     }
   ]
 }
